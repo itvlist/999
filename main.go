@@ -45,6 +45,8 @@ func main() {
 	http.HandleFunc("/zj/api", handlers.ZhejiangApiHandler)
 	http.HandleFunc("/zj/", handlers.ZhejiangHandler)
 	http.HandleFunc("/cditv", handlers.CDITVHandler)
+	http.HandleFunc("/hangzhou", handlers.HangZhouhander)
+
 	http.HandleFunc("/", handlers.ByrApiHandler)
 	http.ListenAndServe(":8080", nil)
 
