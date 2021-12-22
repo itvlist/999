@@ -44,6 +44,7 @@ func main() {
 	http.HandleFunc("/hi/vod/", handlers.FourgtvApiHandler)
 	http.HandleFunc("/zj/api", handlers.ZhejiangApiHandler)
 	http.HandleFunc("/zj/", handlers.ZhejiangHandler)
+	http.HandleFunc("/cditv", handlers.CDITVHandler)
 	http.HandleFunc("/", handlers.ByrApiHandler)
 	http.ListenAndServe(":8080", nil)
 
