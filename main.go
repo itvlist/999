@@ -13,7 +13,7 @@ func main() {
 	flag.IntVar(&handlers.DefaultThreadNum, "t", 5, "Multi Download Thread Num")
 	flag.Parse()
 	logrus.SetOutput(colorable.NewColorableStdout())
-	http.HandleFunc("/index.m3u8", indexHandler)
+	//http.HandleFunc("/index.m3u8", indexHandler)
 	//http.HandleFunc("/api/", apiHandler)
 	//http.HandleFunc("/videoplayback/", videoHandler)
 	http.HandleFunc("/sitv.m3u8", handlers.SitvHandler)
@@ -46,8 +46,12 @@ func main() {
 	http.HandleFunc("/zj/", handlers.ZhejiangHandler)
 	http.HandleFunc("/cditv", handlers.CDITVHandler)
 	http.HandleFunc("/hangzhou", handlers.HangZhouhander)
+	http.HandleFunc("/punakong/", handlers.PunaKongHandler)
 
 	http.HandleFunc("/", handlers.ByrApiHandler)
-	http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8880", nil)
+	if err != nil {
+		logrus.Error(err)
+	}
 
 }
