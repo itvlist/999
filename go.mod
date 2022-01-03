@@ -18,6 +18,7 @@ require (
 	github.com/mattn/go-colorable v0.1.12
 	github.com/schollz/closestmatch v2.1.0+incompatible
 	github.com/sirupsen/logrus v1.8.1
+	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/tidwall/gjson v1.8.1
 	github.com/urfave/cli v1.22.5
 )

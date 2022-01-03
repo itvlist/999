@@ -25,6 +25,40 @@ type jpysvip struct {
 	Url    string `json:"url"`
 }
 
+type jpysvipPlayItem struct {
+	SubTitle string
+	PageUrl string
+	PlayUrl string
+}
+type jpysvipPlayList struct {
+	Id string
+	SrcName string
+	List []jpysvipPlayItem
+
+}
+type jpysvipDetail struct {
+	Title string
+	list []jpysvipPlayList
+}
+
+type jpysvipVodPlayDetail struct {
+	Flag string `json:"flag"`
+	Encrypt int `json:"encrypt"`
+	Trysee int `json:"trysee"`
+	Points int `json:"points"`
+	Link string `json:"link"`
+	LinkNext string `json:"link_next"`
+	LinkPre string `json:"link_pre"`
+	Url string `json:"url"`
+	UrlNext string `json:"url_next"`
+	From string `json:"from"`
+	Server string `json:"server"`
+	Note string `json:"note"`
+	Id string `json:"id"`
+	Sid int `json:"sid"`
+	Nid int `json:"nid"`
+}
+
 type validKey struct {
 	Time  string
 	Wap   string
@@ -79,6 +113,110 @@ func Sign(data string) string {
 	ciphertext :=  make([]byte, len([]byte(data)))
 	mode.CryptBlocks(ciphertext, []byte(data))
 	return base64.StdEncoding.EncodeToString(ciphertext)
+
+}
+
+func getDetailInfo(url string)(*jpysvipDetail, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("authority", "www.jpysvip.net")
+	req.Header.Set("cache-control", "max-age=0")
+	req.Header.Set("sec-ch-ua", "\" Not A;Brand\";v=\"99\", \"Chromium\";v=\"96\", \"Google Chrome\";v=\"96\"")
+	req.Header.Set("sec-ch-ua-mobile","?0")
+	req.Header.Set("sec-ch-ua-platform","macOS")
+	req.Header.Set("upgrade-insecure-requests","1")
+	req.Header.Set("user-agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+	req.Header.Set("accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+	req.Header.Set("sec-fetch-site","none")
+	req.Header.Set("sec-fetch-mode","navigate")
+	req.Header.Set("sec-fetch-user","?1")
+	req.Header.Set("sec-fetch-dest","document")
+	req.Header.Set("referer","https://www.jpysvip.net/")
+	req.Header.Set("accept-language","zh-CN,zh;q=0.9")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	strBody := string(body)
+
+	detail := &jpysvipDetail{}
+	detail.Title = utils.MatchOneOf(strBody, `class="title">([^<]+)</h1>`)[1]
+	detail.list = make([]jpysvipPlayList, 0)
+	matchResult := utils.MatchAll(strBody,"<a href=\"#playlist([^\"]+)\" [^>]+>([^<]+)" )
+	for _,  value := range matchResult{
+		if  value[2] == "极速蓝光" || value[2] == "极速云播" {
+			continue
+		}
+		listId := value[1]
+
+		playList := jpysvipPlayList{
+			Id: listId,
+			SrcName: value[2],
+			List: make([]jpysvipPlayItem, 0),
+		}
+
+		matchResult2 := utils.MatchAll(strBody,"href=\"(/vodplay/[0-9]+-"+ listId+"-[0-9]+.html)\">([^<]+)" )
+		for _,  value2 := range matchResult2 {
+			playList.List = append(playList.List, jpysvipPlayItem{
+				PageUrl: fmt.Sprintf("https://www.jpysvip.net%s", value2[1]),
+				SubTitle: value2[2],
+			})
+		}
+
+		detail.list = append(detail.list, playList)
+
+
+
+	}
+
+	return detail, nil
+}
+
+func getVodPlayDetailInfo(url string)(*jpysvipVodPlayDetail,error){
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("authority", "www.jpysvip.net")
+	req.Header.Set("upgrade-insecure-requests","1")
+	req.Header.Set("user-agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+	req.Header.Set("accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+	req.Header.Set("sec-fetch-site","none")
+	req.Header.Set("sec-fetch-mode","navigate")
+	req.Header.Set("sec-fetch-user","?1")
+	req.Header.Set("sec-fetch-dest","document")
+	req.Header.Set("cache-control", "max-age=0")
+	req.Header.Set("sec-ch-ua", "\" Not A;Brand\";v=\"99\", \"Chromium\";v=\"96\", \"Google Chrome\";v=\"96\"")
+	req.Header.Set("sec-ch-ua-mobile","?0")
+	req.Header.Set("sec-ch-ua-platform","macOS")
+	req.Header.Set("referer","https://www.jpysvip.net/")
+	req.Header.Set("accept-language","zh-CN,zh;q=0.9")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	bodyStr := utils.MatchOneOf(string(body), "player_aaaa=({[^}]+})")[1]
+
+	bodyStr = strings.ReplaceAll(bodyStr,"\\","")
+	var result jpysvipVodPlayDetail
+	json.Unmarshal([]byte(bodyStr), &result)
+
+	return &result, nil
 }
 
 func getValidKeyInfo(urlParam string)(*validKey, error){
