@@ -47,6 +47,7 @@ func main() {
 	http.HandleFunc("/cditv", handlers.CDITVHandler)
 	http.HandleFunc("/hangzhou", handlers.HangZhouhander)
 	http.HandleFunc("/punakong/", handlers.PunaKongHandler)
+	http.HandleFunc("/vipx", handlers.JspyVipHandler)
 
 	http.HandleFunc("/", handlers.ByrApiHandler)
 	err := http.ListenAndServe(":8880", nil)
