@@ -2,20 +2,27 @@ package main
 
 import (
 	"flag"
+	"net/http"
+	"path/filepath"
+
 	"github.com/mattn/go-colorable"
 	"github.com/sirupsen/logrus"
-	"net/http"
 	"wmenjoy.com/iptv/handlers"
 )
-
 
 func main() {
 	flag.IntVar(&handlers.DefaultThreadNum, "t", 5, "Multi Download Thread Num")
 	flag.Parse()
 	logrus.SetOutput(colorable.NewColorableStdout())
+	p, _ := filepath.Abs(filepath.Dir("./m3u8/"))
+
 	//http.HandleFunc("/index.m3u8", indexHandler)
 	//http.HandleFunc("/api/", apiHandler)
 	//http.HandleFunc("/videoplayback/", videoHandler)
+	filehandler := http.StripPrefix("/m3u8/", http.FileServer(http.Dir(p)))
+	http.HandleFunc("/m3u8/", func(rw http.ResponseWriter, r *http.Request) {
+		filehandler.ServeHTTP(rw, r)
+	})
 	http.HandleFunc("/sitv.m3u8", handlers.SitvHandler)
 	http.HandleFunc("/byr.m3u8", handlers.ByrHandler)
 	http.HandleFunc("/youtube.m3u8", handlers.YoutubeIndexHandler)
@@ -25,7 +32,7 @@ func main() {
 	http.HandleFunc("/grtn.m3u8", handlers.GrtnHandler)
 	http.HandleFunc("/youjia.m3u8", handlers.YoujiaHandler)
 	http.HandleFunc("/inews.m3u8", handlers.InewsHandler)
-	http.HandleFunc("/douyu.m3u8",handlers.DouyuHandler)
+	http.HandleFunc("/douyu.m3u8", handlers.DouyuHandler)
 	http.HandleFunc("/neu6.m3u8", handlers.Neu6Handler)
 	http.HandleFunc("/neu.m3u8", handlers.NeuHandler)
 	http.HandleFunc("/tuna.m3u8", handlers.TunaHandler)
@@ -48,7 +55,7 @@ func main() {
 	http.HandleFunc("/hangzhou", handlers.HangZhouhander)
 	http.HandleFunc("/punakong/", handlers.PunaKongHandler)
 
-	http.HandleFunc("/", handlers.ByrApiHandler)
+	//http.HandleFunc("/", handlers.ByrApiHandler)
 	err := http.ListenAndServe(":8880", nil)
 	if err != nil {
 		logrus.Error(err)
