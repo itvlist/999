@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+
 )
 
 var baseAPI = "http://42.193.18.62:9999/analysis.php?v="
