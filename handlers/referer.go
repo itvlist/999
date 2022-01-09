@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"crypto/hmac"
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/sirupsen/logrus"
@@ -197,6 +199,62 @@ func addGdtv(name string, id string){
 	}
 }
 
+func addSztv(name string, id string){
+	referinfos[name] = &RerferInfo{
+		Id:      id,
+		urlFmt:  "https://sztv-live.cutv.com/%s/%s/%s.m3u8",
+		reRegxp: regexp.MustCompilePOSIX(`([^#]+\.ts)`),
+		urlBuildFunc: func(refererInfo RerferInfo) string {
+			secret := "cutvLiveStream|Dream2017"
+			timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)[0:10]
+			h := md5.New()
+			h.Write([]byte(timestamp + id + secret))
+			a := h.Sum(nil)
+			c := hex.EncodeToString(a)
+
+			numUrl := fmt.Sprintf(
+				"https://cls2.cutv.com/getCutvHlsLiveKey?t=%s&id=%s&token=%s&at=1", timestamp, id, c);
+			req, err := http.NewRequest("GET", numUrl, nil)
+			if err != nil {
+				return ""
+			}
+			req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
+			req.Header.Set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return ""
+			}
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return ""
+			}
+
+			strBody := strings.Trim(string(body), "\"")
+			fileName := ""
+			index := len(strBody)
+			if (index > 0) {
+				index -= index / 2
+				strBody = strBody[index:] + strBody[0:index]
+				fileNameb, _ := base64.StdEncoding.DecodeString(reverseString(strBody))
+				fileName = string(fileNameb)
+			}
+
+			url := fmt.Sprintf(refererInfo.urlFmt, id, "500", fileName)
+			return url
+		},
+
+	}
+}
+
+func reverseString(str string) string{
+	runes := []rune(str)
+	for from, to := 0, len(runes)-1; from < to; from, to = from+1, to-1 {
+		runes[from], runes[to] = runes[to], runes[from]
+	}
+	return string(runes)
+
+}
 
 func m(){
 	req, err := http.NewRequest("GET"," gdtvPlayUrlResult.Hd", nil)
@@ -255,6 +313,20 @@ func init(){
 	addGdtv("GDYD","74")
 	addGdtv("GRTNWHPD","75")
 
+	addSztv("SZWS","AxeFRth")
+	addSztv("SZYL","1q4iPng")
+	addSztv("SZSE","1SIQj6s")
+	addSztv("SZGG","2q76Sw2")
+	addSztv("SZDSJ","4azbkoY")
+	addSztv("SZDB","9zoW71b")
+	addSztv("SZYHGW","BJ5u5k2")
+	addSztv("SZDS","ZwxzUXr")
+	addSztv("SZGJ","sztvgjpd")
+	addSztv("SZGJ","sztvgjpd")
+	addSztv("SZTYJK","sztvtyjk")
+	addSztv("SZLG","uGzbXhS")
+	addSztv("SZYDSX","wDF6KJ3")
+	addSztv("SZDVSH","xO1xQFv")
 
 }
 
@@ -339,7 +411,9 @@ func RefererHandler(w http.ResponseWriter, r *http.Request)  {
 	if referinfo.beforeFunc != nil {
 		referinfo.beforeFunc(*referinfo, url, req.Header)
 	} else {
-		req.Header.Set("Referer", referinfo.Referer)
+		if referinfo.Referer != ""{
+			req.Header.Set("Referer", referinfo.Referer)
+		}
 		req.Header.Set("accept", `*/*`)
 	}
 
@@ -358,9 +432,14 @@ func RefererHandler(w http.ResponseWriter, r *http.Request)  {
 			http.Error(w, err.Error(), 503)
 			return
 		}
-		newbody := reRegx.ReplaceAll(body, []byte(referinfo.prefix +"$0"))
-		logrus.Info(string(newbody))
-		w.Write(newbody)
+		if referinfo.prefix != "" {
+			newbody := reRegx.ReplaceAll(body, []byte(referinfo.prefix+"$0"))
+
+			logrus.Info(string(newbody))
+			w.Write(newbody)
+		} else {
+			w.Write(body)
+		}
 	} else {
 		referinfo.afterFunc(*referinfo, resp.Body, w, r)
 	}

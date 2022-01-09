@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 )
-#https://jhpc.manduhu.com/j1217.php?url=
+//https://jhpc.manduhu.com/j1217.php?url=
 //https://fendou.duoduozy.com/m3u8/202201/4/9aefd6f2c21b618657ffc402d10068f23592ed1f.m3u8?st=bRyYq1p_EkTlTcWXwc46pg&e=1641609068
 func getDetailInfo2(url string) error {
 	req, err := http.NewRequest("GET", url, nil)
