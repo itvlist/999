@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,22 +13,26 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 	"wmenjoy.com/iptv/utils"
 )
 
 var host = utils.GetIP()
 
 type RerferInfo struct {
-	Id string
-	Referer string
-	urlFmt string
-	reRegxp *regexp.Regexp
-	prefix string
+	Id           string
+	Referer      string
+	urlFmt       string
+	reRegxp      *regexp.Regexp
+	prefix       string
 	urlBuildFunc func(refererInfo RerferInfo) string
-	beforeFunc func(refererInfo RerferInfo, url string, header http.Header)
-	afterFunc func(refererInfo RerferInfo, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request)
+	beforeFunc   func(refererInfo RerferInfo, url string, header http.Header)
+	afterFunc    func(refererInfo RerferInfo, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request)
 }
+
 var reRegx2 = regexp.MustCompilePOSIX(`([^#]+\.ts)`)
+
 /***
  *
  <?php
@@ -56,17 +59,16 @@ curl_close($c);
 $ts = str_replace($endPath, "http://txycsbl.centv.cn/zb/" . $endPath, $result);
 print_r($ts);
 ?>
- */
-var referinfos = make(map[string]*RerferInfo,0)
+*/
+var referinfos = make(map[string]*RerferInfo, 0)
 
-
-func addCetv(name string, id string){
+func addCetv(name string, id string) {
 	referinfos[name] = &RerferInfo{
-		Id: id,
-		Referer:"http://app.cetv.cn",
-		urlFmt: "http://txycsbl.centv.cn/zb/0104%s.m3u8",
-		prefix: "http://txycsbl.centv.cn/zb/",
-		reRegxp:  regexp.MustCompilePOSIX(`([^#]+\.ts)`),
+		Id:      id,
+		Referer: "http://app.cetv.cn",
+		urlFmt:  "http://txycsbl.centv.cn/zb/0104%s.m3u8",
+		prefix:  "http://txycsbl.centv.cn/zb/",
+		reRegxp: regexp.MustCompilePOSIX(`([^#]+\.ts)`),
 	}
 }
 
@@ -75,29 +77,27 @@ type nodeParamResult struct {
 }
 
 type gdtvQueryResult struct {
-	AvatarUrl string `json:"avatarUrl"`
-	Category int `json:"category"`
-	CoverUrl string `json:"coverUrl"`
-	Keyword string `json:"keyword"`
-	Name string `json:"name"`
-	Pk int `json:"pk"`
-	PlayUrl string `json:"playUrl"`
-	Slogan string `json:"slogan"`
-	TimeOffset int `json:"timeOffset"`
-
+	AvatarUrl  string `json:"avatarUrl"`
+	Category   int    `json:"category"`
+	CoverUrl   string `json:"coverUrl"`
+	Keyword    string `json:"keyword"`
+	Name       string `json:"name"`
+	Pk         int    `json:"pk"`
+	PlayUrl    string `json:"playUrl"`
+	Slogan     string `json:"slogan"`
+	TimeOffset int    `json:"timeOffset"`
 }
 type gdtvPlayUrlResult struct {
 	Hd string `json:"hd"`
 }
 
-
-func optionForUrl(url string){
+func optionForUrl(url string) {
 	req, err := http.NewRequest("OPTIONS", url, nil)
 	if err != nil {
 		return
 	}
 	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
-	req.Header.Set("user-agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
 	req.Header.Set("access-control-request-method", "GET")
 	req.Header.Set("authority", "gdtv-api.gdtv.cn")
 	req.Header.Set("access-control-request-headers", "content-type,x-itouchtv-ca-key,x-itouchtv-ca-signature,x-itouchtv-ca-timestamp,x-itouchtv-client,x-itouchtv-device-id")
@@ -112,34 +112,79 @@ func optionForUrl(url string){
 
 }
 
-func addGdtv(name string, id string){
+func optionForGetParam(url string) {
+	req, err := http.NewRequest("OPTIONS", url, nil)
+	if err != nil {
+		return
+	}
+	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
+	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+	req.Header.Set("access-control-request-method", "GET")
+	req.Header.Set("accept", "*/*")
+	req.Header.Set("authority", "tcdn-api.itouchtv.cn")
+	req.Header.Set("access-control-request-headers", "content-type,x-itouchtv-ca-key,x-itouchtv-ca-signature,x-itouchtv-ca-timestamp,x-itouchtv-client,x-itouchtv-device-id")
+	req.Header.Set("sec-fetch-dest", "empty")
+	req.Header.Set("sec-fetch-site", "same-site")
+	req.Header.Set("sec-fetch-mode", "cors")
+	req.Header.Set("origin", `https://www.gdtv.cn`)
+	_, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return
+	}
+
+}
+
+func addGdtv(name string, id string) {
 	referinfos[name] = &RerferInfo{
-		Id: id,
-		Referer:"http://app.cetv.cn",
-		urlFmt: "https://gdtv-api.gdtv.cn/api/tv/v2/tvChannel/%s?tvChannelPk=%s&node=%s",
-		prefix: "http://txycsbl.centv.cn/zb/",
-		reRegxp:  regexp.MustCompilePOSIX(`([^#]+\.ts)`),
+		Id:      id,
+		Referer: "http://app.cetv.cn",
+		urlFmt:  "https://gdtv-api.gdtv.cn/api/tv/v2/tvChannel/%s?tvChannelPk=%s&node=%s",
+		prefix:  "http://txycsbl.centv.cn/zb/",
+		reRegxp: regexp.MustCompilePOSIX(`([^#]+\.ts)`),
 		urlBuildFunc: func(refererInfo RerferInfo) string {
+			optionForGetParam("https://tcdn-api.itouchtv.cn/getParam")
 			req, err := http.NewRequest("GET", "https://tcdn-api.itouchtv.cn/getParam", nil)
 			node := ""
 			if err != nil {
-				node ="2028330049-a01d3e9adb2e3ef55a6b897cf943e947"
+				node = "2028330049-a01d3e9adb2e3ef55a6b897cf943e947"
 			}
+
+			timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)[0:13]
+			req.Header.Set("authority", "tcdn-api.itouchtv.cn")
+			req.Header.Set("x-itouchtv-ca-timestamp", timestamp)
+			req.Header.Set("x-itouchtv-ca-key", "89541443007807288657755311869534")
+			req.Header.Set("x-itouchtv-client", "WEB_PC")
+			req.Header.Set("x-itouchtv-device-id", "WEB_d547fdf0-633e-11ec-83d3-fb13b5511434")
+			req.Header.Set("content-type", "application/json")
+			req.Header.Set("accept", "application/json, text/plain, */*")
+			req.Header.Set("origin", "https://www.gdtv.cn")
+			req.Header.Set("sec-ch-ua-mobile", "?0")
+			req.Header.Set("sec-ch-ua-platform", "macOS")
+			req.Header.Set("sec-fetch-site", "same-site")
+			req.Header.Set("sec-fetch-mode", "cors")
+			req.Header.Set("accept-language", "zh-CN,zh;q=0.9")
+			secret := []byte("dfkcY1c3sfuw0Cii9DWjOUO3iQy2hqlDxyvDXd1oVMxwYAJSgeB6phO8eW1dfuwX")
+			message := []byte(fmt.Sprintf("GET\n%s\n%s\n", "https://tcdn-api.itouchtv.cn/getParam", timestamp))
+			hash := hmac.New(sha256.New, secret)
+			hash.Write(message)
+			signature := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+			req.Header.Set("x-itouchtv-ca-signature", signature)
+			req.Header.Set("Referer", "https://www.gdtv.cn/")
 			req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
-			req.Header.Set("user-agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+			req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
-				node ="2028330049-a01d3e9adb2e3ef55a6b897cf943e947"
+				node = "2028330049-a01d3e9adb2e3ef55a6b897cf943e947"
 			}
 			defer resp.Body.Close()
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				node ="2028330049-a01d3e9adb2e3ef55a6b897cf943e947"
+				node = "2028330049-a01d3e9adb2e3ef55a6b897cf943e947"
 			}
 			paramResult := nodeParamResult{}
 			err = json.Unmarshal(body, &paramResult)
 			if err != nil || paramResult.Node == "" {
-				node ="2028330049-a01d3e9adb2e3ef55a6b897cf943e947"
+				node = "2028330049-a01d3e9adb2e3ef55a6b897cf943e947"
 			} else {
 				node = paramResult.Node
 			}
@@ -154,7 +199,7 @@ func addGdtv(name string, id string){
 			header.Set("x-itouchtv-ca-timestamp", timestamp)
 			header.Set("x-itouchtv-ca-key", "89541443007807288657755311869534")
 			header.Set("x-itouchtv-client", "WEB_PC")
-			header.Set("x-itouchtv-device-id", "WEB_b9cd0e90-709e-11ec-8f23-ebd518a0a397")
+			header.Set("x-itouchtv-device-id", "WEB_d547fdf0-633e-11ec-83d3-fb13b5511434")
 			header.Set("content-type", "application/json")
 			header.Set("accept", "application/json, text/plain, */*")
 			header.Set("origin", "https://www.gdtv.cn")
@@ -164,7 +209,7 @@ func addGdtv(name string, id string){
 			header.Set("sec-fetch-mode", "cors")
 			header.Set("accept-language", "zh-CN,zh;q=0.9")
 			secret := []byte("dfkcY1c3sfuw0Cii9DWjOUO3iQy2hqlDxyvDXd1oVMxwYAJSgeB6phO8eW1dfuwX")
-			message := []byte(fmt.Sprintf("GET\n%s\n%s\n",url, timestamp))
+			message := []byte(fmt.Sprintf("GET\n%s\n%s\n", url, timestamp))
 			hash := hmac.New(sha256.New, secret)
 			hash.Write(message)
 			signature := base64.StdEncoding.EncodeToString(hash.Sum(nil))
@@ -184,22 +229,20 @@ func addGdtv(name string, id string){
 			gdtvPlayUrlResult := gdtvPlayUrlResult{}
 			err = json.Unmarshal([]byte(gdtvQueryResult.PlayUrl), &gdtvPlayUrlResult)
 
-			url := fmt.Sprintf("http://%s:8880/transfer?url=%s&referer=%s",host,
-				base64.StdEncoding.EncodeToString([]byte(gdtvPlayUrlResult.Hd)),base64.StdEncoding.EncodeToString([]byte("https://www.gdtv.cn/")))
+			url := fmt.Sprintf("http://%s:8880/transfer?url=%s&referer=%s", host,
+				base64.StdEncoding.EncodeToString([]byte(gdtvPlayUrlResult.Hd)), base64.StdEncoding.EncodeToString([]byte("https://www.gdtv.cn/")))
 			w.Header().Set("Content-Type", "audio/x-mpegurl")
-			http.RedirectHandler(url,302).ServeHTTP(w, r)
-
+			http.RedirectHandler(url, 302).ServeHTTP(w, r)
 
 			/**
 
-			*/
+			 */
 		},
 	}
 }
 
-
-func m(){
-	req, err := http.NewRequest("GET"," gdtvPlayUrlResult.Hd", nil)
+func m() {
+	req, err := http.NewRequest("GET", " gdtvPlayUrlResult.Hd", nil)
 
 	if err != nil {
 		//http.Error(w, err.Error(), 503)
@@ -208,7 +251,7 @@ func m(){
 
 	req.Header.Set("authority", "tcdn.itouchtv.cn")
 	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
-	req.Header.Set("user-agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+	req.Header.Set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
 	req.Header.Set("Referer", "https://www.gdtv.cn/")
 	req.Header.Set("sec-ch-ua-mobile", "?0")
 	req.Header.Set("sec-ch-ua-platform", "macOS")
@@ -220,7 +263,7 @@ func m(){
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-	//	http.Error(w, err.Error(), 503)
+		//	http.Error(w, err.Error(), 503)
 		return
 	}
 	defer resp.Body.Close()
@@ -232,33 +275,32 @@ func m(){
 	//w.Write(body)
 }
 
-func init(){
-	addCetv("CETV-1","cetv1")
-	addCetv("CETV-2","cetv2")
-	addCetv("CETV-3","cetv3")
-	addCetv("CETV-4","cetv4")
-	addGdtv("GDWS","43")
-	addGdtv("GDZJ","44")
-	addGdtv("GDXW","45")
-	addGdtv("GDTY","47")
-	addGdtv("NFWS","51")
-	addGdtv("GDJJKJ","49")
-	addGdtv("GDYS","53")
-	addGdtv("GDZY","16")
-	addGdtv("GDGJ","46")
-	addGdtv("GDSE","54")
-	addGdtv("GDJJKT","66")
-	addGdtv("GDNFGW","42")
-	addGdtv("GDLNXQ","15")
-	addGdtv("GDFC","67")
-	addGdtv("GDXDJY","13")
-	addGdtv("GDYD","74")
-	addGdtv("GRTNWHPD","75")
-
+func init() {
+	addCetv("CETV-1", "cetv1")
+	addCetv("CETV-2", "cetv2")
+	addCetv("CETV-3", "cetv3")
+	addCetv("CETV-4", "cetv4")
+	addGdtv("GDWS", "43")
+	addGdtv("GDZJ", "44")
+	addGdtv("GDXW", "45")
+	addGdtv("GDTY", "47")
+	addGdtv("NFWS", "51")
+	addGdtv("GDJJKJ", "49")
+	addGdtv("GDYS", "53")
+	addGdtv("GDZY", "16")
+	addGdtv("GDGJ", "46")
+	addGdtv("GDSE", "54")
+	addGdtv("GDJJKT", "66")
+	addGdtv("GDNFGW", "42")
+	addGdtv("GDLNXQ", "15")
+	addGdtv("GDFC", "67")
+	addGdtv("GDXDJY", "13")
+	addGdtv("GDYD", "74")
+	addGdtv("GRTNWHPD", "75")
 
 }
 
-func TransferHandler(w http.ResponseWriter, r *http.Request){
+func TransferHandler(w http.ResponseWriter, r *http.Request) {
 	logrus.Infof("Request URL:%s", r.URL)
 	err := r.ParseForm()
 	if err != nil {
@@ -267,20 +309,22 @@ func TransferHandler(w http.ResponseWriter, r *http.Request){
 	}
 	url := r.Form.Get("url")
 	referer := r.Form.Get("referer")
-	urlb ,err := base64.StdEncoding.DecodeString(url);
-	refererb, err:=  base64.StdEncoding.DecodeString(referer);
+	urlb, err := base64.StdEncoding.DecodeString(url)
+	refererb, err := base64.StdEncoding.DecodeString(referer)
 
-	req, err := http.NewRequest("GET",string(urlb), nil)
+	req, err := http.NewRequest("GET", string(urlb), nil)
 
 	if err != nil {
 		http.Error(w, err.Error(), 503)
 		return
 	}
+	print(string(urlb))
+	print(string(refererb))
 	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
-	req.Header.Set("user-agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
 	req.Header.Set("Referer", string(refererb))
 	req.Header.Set("sec-ch-ua-mobile", "?0")
-	req.Header.Set("sec-ch-ua-platform", "macOS")
+	req.Header.Set("sec-ch-ua-platform", "Windows")
 	req.Header.Set("accept", `*/*`)
 	req.Header.Set("sec-fetch-dest", "empty")
 	req.Header.Set("sec-fetch-site", "cross-site")
@@ -297,11 +341,11 @@ func TransferHandler(w http.ResponseWriter, r *http.Request){
 		http.Error(w, err.Error(), 503)
 		return
 	}
+
 	w.Write(body)
 }
 
-
-func RefererHandler(w http.ResponseWriter, r *http.Request)  {
+func RefererHandler(w http.ResponseWriter, r *http.Request) {
 	logrus.Infof("Request URL:%s", r.URL)
 	err := r.ParseForm()
 	if err != nil {
@@ -335,15 +379,13 @@ func RefererHandler(w http.ResponseWriter, r *http.Request)  {
 		return
 	}
 	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
-	req.Header.Set("user-agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
 	if referinfo.beforeFunc != nil {
 		referinfo.beforeFunc(*referinfo, url, req.Header)
 	} else {
 		req.Header.Set("Referer", referinfo.Referer)
 		req.Header.Set("accept", `*/*`)
 	}
-
-
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -358,7 +400,7 @@ func RefererHandler(w http.ResponseWriter, r *http.Request)  {
 			http.Error(w, err.Error(), 503)
 			return
 		}
-		newbody := reRegx.ReplaceAll(body, []byte(referinfo.prefix +"$0"))
+		newbody := reRegx.ReplaceAll(body, []byte(referinfo.prefix+"$0"))
 		logrus.Info(string(newbody))
 		w.Write(newbody)
 	} else {
