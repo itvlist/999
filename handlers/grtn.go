@@ -22,7 +22,7 @@ func GrtnHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(503), 503)
 		return
 	}
-	uri := "http://www.gdtv.cn/m2o/channel/channel_info.php?id=" + id
+	uri := "http://www.gdtv.go.cn/m2o/channel/channel_info.php?id=" + id
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", uri, nil)
 	req.Header.Set("User-Agent", "curl/7.52.1")

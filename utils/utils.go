@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -24,6 +25,25 @@ import (
 func GetStringFromJSON(json, path string) string {
 	return gjson.Get(json, path).String()
 }
+
+func GetIP() string{
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return  ipnet.IP.String()
+			}
+		}
+	}
+	return "localhost"
+}
+
 
 // MatchOneOf match one of the patterns
 func MatchOneOf(text string, patterns ...string) []string {

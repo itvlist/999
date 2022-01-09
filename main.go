@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+
 	flag.IntVar(&handlers.DefaultThreadNum, "t", 5, "Multi Download Thread Num")
 	flag.Parse()
 	logrus.SetOutput(colorable.NewColorableStdout())
@@ -55,11 +56,16 @@ func main() {
 	http.HandleFunc("/hangzhou", handlers.HangZhouhander)
 	http.HandleFunc("/punakong/", handlers.PunaKongHandler)
 	http.HandleFunc("/vipx", handlers.JspyVipHandler)
+	http.HandleFunc("/vip2", handlers.Vip2Handler)
+	http.HandleFunc("/referer", handlers.RefererHandler)
+	http.HandleFunc("/transfer", handlers.TransferHandler)
 
 	//http.HandleFunc("/", handlers.ByrApiHandler)
 	err := http.ListenAndServe(":8880", nil)
 	if err != nil {
 		logrus.Error(err)
 	}
+
+
 
 }

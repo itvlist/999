@@ -28,7 +28,7 @@ func TestGetVodDetail(t *testing.T){
 
 
 func TestSign(t *testing.T) {
-	url := fmt.Sprintf("https://nbjx.vip/?url=%s", "https://v.qq.com/x/cover/im60meg91bo9dbr.html")
+	url := fmt.Sprintf("https://nbjx.vip/?url=%s", "https://v.qq.com/x/cover/mzc00200ihwjf82/d0034ptm2h9.html")
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -113,6 +113,9 @@ func TestSign(t *testing.T) {
 		return
 	}
 	print(string(body))
+	print("\n")
 
 	print(realResult.Url)
+	print("\n")
+
 }
