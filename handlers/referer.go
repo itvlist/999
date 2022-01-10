@@ -23,6 +23,8 @@ var host = utils.GetIP()
 
 type RerferInfo struct {
 	Id string
+	Key string
+	Name string
 	Referer string
 	urlFmt string
 	reRegxp *regexp.Regexp
@@ -187,7 +189,8 @@ func addGdtv(name string, id string){
 			err = json.Unmarshal([]byte(gdtvQueryResult.PlayUrl), &gdtvPlayUrlResult)
 
 			url := fmt.Sprintf("http://%s:8880/transfer?url=%s&referer=%s",host,
-				base64.StdEncoding.EncodeToString([]byte(gdtvPlayUrlResult.Hd)),base64.StdEncoding.EncodeToString([]byte("https://www.gdtv.cn/")))
+				base64.StdEncoding.EncodeToString([]byte(gdtvPlayUrlResult.Hd)),
+				base64.StdEncoding.EncodeToString([]byte("https://www.gdtv.cn/")))
 			w.Header().Set("Content-Type", "audio/x-mpegurl")
 			http.RedirectHandler(url,302).ServeHTTP(w, r)
 
@@ -247,6 +250,54 @@ func addSztv(name string, id string){
 	}
 }
 
+
+func addCqtv(key string, name string, id string, ){
+	referinfos[key] = &RerferInfo{
+		Id: id,
+		Key: key,
+		Name: name,
+		urlFmt: "https://web.cbg.cn/live/getLiveUrl?url=%s",
+		urlBuildFunc: func(refererInfo RerferInfo) string {
+
+			url := fmt.Sprintf("https://rmtapi.cbg.cn/list/%s/1.html?pagesize=20", refererInfo.Id)
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				return ""
+			}
+			req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
+			req.Header.Set("user-agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return ""
+			}
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return ""
+			}
+			urlResult := utils.MatchOneOf(string(body), "\"ios_HDlive_url\":\"([^\"]+)")[1]
+			return fmt.Sprintf(refererInfo.urlFmt, urlResult)
+		},
+		afterFunc: func(refererInfo RerferInfo, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request) {
+			defer bodyReader.Close()
+			body, err := ioutil.ReadAll(bodyReader)
+			if err != nil {
+				http.Error(w, err.Error(), 503)
+				return
+			}
+			urlResult := utils.MatchOneOf(string(body), "\"url\":\"([^\"]+)")[1]
+
+			index := strings.LastIndex(urlResult, "/")
+
+			realUrl := fmt.Sprintf("http://%s:8880/transfer?url=%s&referer=%s&prefix=%s",host,
+				base64.StdEncoding.EncodeToString([]byte(urlResult)),
+				base64.StdEncoding.EncodeToString([]byte("https://www.cbg.cn/")),
+				base64.StdEncoding.EncodeToString([]byte(urlResult[0:index])))
+			w.Header().Set("Content-Type", "audio/x-mpegurl")
+			http.RedirectHandler(realUrl, 302).ServeHTTP(w,r)
+		},
+	}
+}
 func reverseString(str string) string{
 	runes := []rune(str)
 	for from, to := 0, len(runes)-1; from < to; from, to = from+1, to-1 {
@@ -328,6 +379,8 @@ func init(){
 	addSztv("SZYDSX","wDF6KJ3")
 	addSztv("SZDVSH","xO1xQFv")
 
+	addCqtv("CQWS", "重庆卫视 HD","4918")
+
 }
 
 func TransferHandler(w http.ResponseWriter, r *http.Request){
@@ -339,8 +392,10 @@ func TransferHandler(w http.ResponseWriter, r *http.Request){
 	}
 	url := r.Form.Get("url")
 	referer := r.Form.Get("referer")
-	urlb ,err := base64.StdEncoding.DecodeString(url);
-	refererb, err:=  base64.StdEncoding.DecodeString(referer);
+	prefix := r.Form.Get("prefix")
+	urlb ,err := base64.StdEncoding.DecodeString(url)
+	refererb, err:=  base64.StdEncoding.DecodeString(referer)
+	prefixb, err:=  base64.StdEncoding.DecodeString(prefix)
 
 	req, err := http.NewRequest("GET",string(urlb), nil)
 
@@ -369,7 +424,20 @@ func TransferHandler(w http.ResponseWriter, r *http.Request){
 		http.Error(w, err.Error(), 503)
 		return
 	}
-	w.Write(body)
+	w.Header().Set("Content-Type", "audio/x-mpegurl")
+
+	if prefixb != nil {
+		var newbody []byte
+		if strings.HasSuffix(string(prefixb), "/"){
+			newbody = reRegx.ReplaceAll(body, []byte(string(prefixb)+"$0"))
+		} else {
+			newbody = reRegx.ReplaceAll(body, []byte(string(prefixb)+"/$0"))
+		}
+		w.Write(newbody)
+	} else {
+		w.Write(body)
+	}
+
 }
 
 
@@ -433,7 +501,15 @@ func RefererHandler(w http.ResponseWriter, r *http.Request)  {
 			return
 		}
 		if referinfo.prefix != "" {
-			newbody := reRegx.ReplaceAll(body, []byte(referinfo.prefix+"$0"))
+			w.Header().Set("Content-Type", "audio/x-mpegurl")
+
+			var newbody []byte
+			if strings.HasSuffix(referinfo.prefix, "/"){
+				newbody = reRegx.ReplaceAll(body, []byte(referinfo.prefix+"$0"))
+			} else {
+				newbody = reRegx.ReplaceAll(body, []byte(referinfo.prefix+"/$0"))
+			}
+
 
 			logrus.Info(string(newbody))
 			w.Write(newbody)
