@@ -1,0 +1,53 @@
+[
+  {
+    "code": "txcdn",
+    "publishHost": "http://livehyw5.chinamcache.com",
+    "H5PublishHost": "http://livehyw5.chinamcache.com",
+    "seekField": "start",
+    "unit": "s",
+    "openChain": "true",
+    "invalidTime": "3600",
+    "encryptKey": "roZ68Okc5MUTMraM",
+    "liveEncryptKey": "roZ68Okc5MUTMraM",
+    "encryptMode": "A",
+    "openPcdn": "false",
+    "getAuthUrl": "http://em.chinamcloud.com/player/encryptUrl",
+    "PlaybackLiveHost": "http://playback.chinamcache.com/"
+  }
+]
+
+roZ68Okc5MUTMraMzb01
+var i = function(e, t, i, r, n) {
+return s(r - 365)
+},
+r = "",
+n = new URL(t)['pathname'];
+- 1 != (r = n.substring(n.lastIndexOf("/") + 1))['indexOf'](".") && (r = r.substring(0, r['indexOf'](".")));
+var a;
+return r
+}(e[k(0, -824)], e[url]);
+
+}
+if (console['log']('3333'), B && B[0] && B[0]['encryptKey'] && B[0]['invalidTime']) {
+var U = function(e, t) {
+var i = function(e, t, i, r, n) {
+return s(r - 365)
+},
+r = "",
+n = new URL(t)['pathname']; - 1 != (r = n.substring.lastIndexOf("/") + 1).indexOf(".") && (r = r.substring(0, r.indexOf(".")));
+var a;
+return r
+}(e['playType'], e['url'])
+O = (O = parseInt((new Date)['getTime']() / 1e3) + Number(B[0]['invalidTime']))['toString'](16), D = (0, n.default)(B[0]['encryptKey'] + U + O), console['log']('4444')
+}
+}
+R = function(e, t, i) {
+var a = "";
+try {
+a = new URL(e)
+} catch (e) {
+return null
+}
+a['search'] ?  e = e + '&txSecret=' + t + '&txTime=' + i : e = e + '?txSecret=' + t + '&txTime=' + i;
+return e
+}(e['url'], D, O) || ""
