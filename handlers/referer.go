@@ -442,7 +442,7 @@ func addXjtv(key string, name string, id string){
 		Key:    key,
 		Jump: true,
 		Name:   name,
-		//prefix: "http://livehyw5.chinamcache.com/hyw/",
+		prefix: "http://livehyw5.chinamcache.com/hyw/",
 		urlFmt: "http://livehyw5.chinamcache.com/hyw/%s.m3u8?txSecret=%s&txTime=%s",
 		urlBuildFunc: func(refererInfo RerferInfo) string {
 			url := fmt.Sprintf("http://mediaxjtvs.chinamcache.com/hyw/media/playerJson/liveChannel/7d40edeb62fe4f8a9d9a08bc653dcab6_PlayerParamProfile.json")
@@ -571,6 +571,7 @@ func init() {
 	addCqtv("CQWS", "重庆卫视 HD","4918")
 
 	addXjtv("XJSE", "新疆少儿 HD", "zb12")
+	addXjtv("XJWS", "新疆卫视 HD", "zb01")
 
 }
 
