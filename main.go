@@ -60,6 +60,7 @@ func main() {
 	http.HandleFunc("/referer", handlers.RefererHandler)
 	http.HandleFunc("/transfer", handlers.TransferHandler)
 	http.HandleFunc("/maotv", handlers.MaoTvHandler)
+	http.HandleFunc("/didy", handlers.DiDyHandler)
 
 	//http.HandleFunc("/", handlers.ByrApiHandler)
 	err := http.ListenAndServe(":8880", nil)
