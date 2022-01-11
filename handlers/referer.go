@@ -12,13 +12,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
 	"github.com/sirupsen/logrus"
 	"wmenjoy.com/iptv/utils"
 )
@@ -40,7 +40,6 @@ type RerferInfo struct {
 }
 
 var reRegx2 = regexp.MustCompilePOSIX(`([^#]+\.ts)`)
-
 var referinfos = make(map[string]*RerferInfo, 0)
 
 func addCetv(name string, id string) {
@@ -71,6 +70,7 @@ type gdtvQueryResult struct {
 type gdtvPlayUrlResult struct {
 	Hd string `json:"hd"`
 }
+
 
 func optionForUrl(url string) {
 	req, err := http.NewRequest("OPTIONS", url, nil)
@@ -218,10 +218,6 @@ func addGdtv(name string, id string) {
 			urlstr := fmt.Sprintf("http://%s:8880/transfer?%s", host, values.Encode())
 			w.Header().Set("Content-Type", "audio/x-mpegurl")
 			http.RedirectHandler(urlstr, 302).ServeHTTP(w, r)
-
-			/**
-
-			 */
 		},
 	}
 }
@@ -484,7 +480,291 @@ func addXjtv(key string, name string, id string) {
 	}
 }
 
-func reverseString(str string) string {
+
+type JxtvAuthResult struct {
+	Code   int    `json:"code"`
+	Status string `json:"status"`
+	T      string `json:"t"`
+	Count  int    `json:"count"`
+	Token  string `json:"token"`
+}
+
+func addJxtv(key string, name string, id string){
+	referinfos[key] = &RerferInfo{
+		Id:     id,
+		Key:    key,
+		Jump:   true,
+		Name:   name,
+		Referer: "http://www.jxntv.cn/",
+		urlFmt: "https://live.jxtvcn.com.cn/live-jxtv/%s.m3u8?source=pc&t=%s&token=%s",
+		urlBuildFunc: func(refererInfo RerferInfo) string {
+			charset := []rune("ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678oOLl9gqVvUuI1")
+			eTags := make([]rune,8)
+			for  i := 0; i < 8; i ++ {
+				eTags[i] = charset[rand.Intn(len(charset))]
+			}
+			timestamp := strconv.FormatInt(time.Now().Unix(),10)
+			eTag := string(eTags)
+			h := md5.New()
+			h.Write([]byte(timestamp + id + ".m3u8"  + eTag + "dfasg2df!f"))
+			a := h.Sum(nil)
+
+
+			values := url.Values{}
+			values.Set("t", timestamp)
+			values.Set("stream", id + ".m3u8")
+
+			req, err := http.NewRequest("POST", "https://app.jxntv.cn/Qiniu/liveauth/getPCAuth.php", strings.NewReader(values.Encode()))
+			if err != nil {
+				return ""
+			}
+			req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
+			req.Header.Set("user-agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+			req.Header.Set("Origin", `http://www.jxntv.cn`)
+			req.Header.Set("Referer", `http://www.jxntv.cn/`)
+			req.Header.Set("Host", `app.jxntv.cn`)
+			req.Header.Set("etag", eTag)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+			req.Header.Set("Content-Length", "34")
+			req.Header.Set("Authorization", hex.EncodeToString(a))
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return ""
+			}
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+
+			if err != nil {
+				return ""
+			}
+
+			result := JxtvAuthResult{}
+
+			json.Unmarshal(body, &result)
+
+			if result.Code != 200 {
+				return ""
+			}
+
+			return fmt.Sprintf(refererInfo.urlFmt, refererInfo.Id, result.T, result.Token)
+		},
+	}
+}
+
+type gztvResult struct {
+	Title       string `json:"title"`
+	EntryType   string `json:"entry_type"`
+	Url         string `json:"url"`
+	Icon        string `json:"icon"`
+	PubDate     string `json:"pub_date"`
+	Image       string `json:"image"`
+	Description string `json:"description"`
+	Author      string `json:"author"`
+	StreamUrl   string `json:"stream_url"`
+}
+
+func addGztv(key string, name string, id string){
+	referinfos[key] = &RerferInfo{
+		Id:     id,
+		Key:    key,
+		Jump:   true,
+		Name:   name,
+		Referer: "https://www.gzstv.com/",
+		urlFmt: "https://api.gzstv.com/v1/tv/%s/",
+		afterFunc: func(refererInfo RerferInfo, url string, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request) {
+			body, err := ioutil.ReadAll(bodyReader)
+			if err != nil {
+				http.Error(w, http.StatusText(503), 503)
+			}
+
+			result := gztvResult{}
+
+			json.Unmarshal(body, &result)
+
+			http.RedirectHandler(result.StreamUrl,302).ServeHTTP(w, r)
+		},
+	}
+}
+
+func addCdtv(key string, name string, id string){
+	referinfos[key] = &RerferInfo{
+		Id:     id,
+		Key:    key,
+		Jump:   true,
+		Name:   name,
+		Referer: "https://www.cditv.cn/",
+		urlFmt: "https://www.cditv.cn/api.php?op=live&type=playTv&fluency=sd&videotype=m3u8&catid=192&id=%s",
+		afterFunc: func(refererInfo RerferInfo, url string, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request) {
+			body, err := ioutil.ReadAll(bodyReader)
+			if err != nil {
+				http.Error(w, http.StatusText(503), 503)
+			}
+
+			w.Header().Set("Content-Type", "audio/x-mpegurl")
+			http.RedirectHandler(string(body),302).ServeHTTP(w, r)
+		},
+	}
+}
+
+type AnhuiTvResult struct {
+	Id         int    `json:"id"`
+	Name       string `json:"name"`
+	Aspect     string `json:"aspect"`
+	CommentNum int    `json:"comment_num"`
+	Snap       struct {
+		Host     string `json:"host"`
+		Dir      string `json:"dir"`
+		Path     string `json:"path"`
+		Filepath string `json:"filepath"`
+		Filename string `json:"filename"`
+	} `json:"snap"`
+	SiteId     int    `json:"site_id"`
+	ClickNum   int    `json:"click_num"`
+	PraiseNum  int    `json:"praise_num"`
+	ShareNum   int    `json:"share_num"`
+	M3U8       string `json:"m3u8"`
+	CurProgram struct {
+		StartTime string `json:"start_time"`
+		Program   string `json:"program"`
+	} `json:"cur_program"`
+	NextProgram struct {
+		StartTime string `json:"start_time"`
+		Program   string `json:"program"`
+	} `json:"next_program"`
+	Logo struct {
+		Square struct {
+			Host     string `json:"host"`
+			Dir      string `json:"dir"`
+			Path     string `json:"path"`
+			Filepath string `json:"filepath"`
+			Filename string `json:"filename"`
+		} `json:"square"`
+		Rectangle struct {
+			Host     string `json:"host"`
+			Dir      string `json:"dir"`
+			Path     string `json:"path"`
+			Filepath string `json:"filepath"`
+			Filename string `json:"filename"`
+		} `json:"rectangle"`
+	} `json:"logo"`
+	SaveTime      string `json:"save_time"`
+	AudioOnly     string `json:"audio_only"`
+	ContentUrl    string `json:"content_url"`
+	ChannelStream []struct {
+		Url        string `json:"url"`
+		Name       string `json:"name"`
+		StreamName string `json:"stream_name"`
+		M3U8       string `json:"m3u8"`
+		Bitrate    string `json:"bitrate"`
+		StreamUrl  string `json:"stream_url"`
+	} `json:"channel_stream"`
+	NodeId   int    `json:"node_id"`
+	ShareUrl string `json:"share_url"`
+	OriginId int    `json:"origin_id"`
+}
+//        "appid":"m2otdjzyuuu8bcccnq",
+//                    "appkey":"5eab6b4e1969a8f9aef459699f0d9000",
+func addAhtv(key string, name string, id string){
+	referinfos[key] = &RerferInfo{
+		Id:     id,
+		Key:    key,
+		Jump:   true,
+		Name:   name,
+		Referer: "http://www.ahtv.cn/",
+		urlFmt: "http://mapi.ahtv.cn/api/open/ahtv/channel.php?appid=m2otdjzyuuu8bcccnq&appkey=5eab6b4e1969a8f9aef459699f0d9000&is_audio=0&category_id=1%2C2",
+		urlBuildFunc: func(refererInfo RerferInfo) string {
+			return refererInfo.urlFmt
+		},
+		afterFunc: func(refererInfo RerferInfo, url string, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request) {
+			body, err := ioutil.ReadAll(bodyReader)
+			if err != nil {
+				http.Error(w, http.StatusText(503), 503)
+			}
+
+			result := make([]AnhuiTvResult,0)
+
+			_ =json.Unmarshal(body, &result)
+			id,_:= strconv.Atoi(refererInfo.Id)
+			for _, value := range result{
+				if value.Id == id {
+					w.Header().Set("Content-Type", "audio/x-mpegurl")
+					http.RedirectHandler(string(value.M3U8),302).ServeHTTP(w, r)
+					return
+				}
+			}
+		},
+	}
+}
+
+type HbTvResult struct {
+	Id             string `json:"id"`
+	Name           string `json:"name"`
+	Alias          string `json:"alias"`
+	Stream         string `json:"stream"`
+	Icon           string `json:"icon"`
+	LiveType       string `json:"live_type"`
+	AccessType     string `json:"access_type"`
+	Fms            string `json:"fms"`
+	Created        string `json:"created"`
+	Createdby      string `json:"createdby"`
+	PlaybillStatus string `json:"playbill_status"`
+	Replay         string `json:"replay"`
+	ReplayExpire   string `json:"replay_expire"`
+	HasHd          string `json:"has_hd"`
+	PublishedPc    string `json:"published_pc"`
+	PublishedPhone string `json:"published_phone"`
+	Rate           string `json:"rate"`
+	DefaultThumb   string `json:"default_thumb"`
+	StreamHd       string `json:"stream_hd"`
+	Rtmp           string `json:"rtmp"`
+	RtmpHd         string `json:"rtmp_hd"`
+	Sort           string `json:"sort"`
+	State          string `json:"state"`
+	Url            string `json:"url"`
+	PlayUrl        string `json:"play_url"`
+	PlayUrlSd      string `json:"play_url_sd"`
+	PlayUrlHd      string `json:"play_url_hd"`
+	UsePub         string `json:"use_pub"`
+	Shift          string `json:"shift"`
+	ShiftStarttime string `json:"shift_starttime"`
+	ShiftEndtime   string `json:"shift_endtime"`
+	VirtualLive    string `json:"virtual_live"`
+	PlayControl    string `json:"play_control"`
+	VmsTid         string `json:"vms_tid"`
+	ControlUrl     string `json:"control_url"`
+	ShiftDay       string `json:"shift_day"`
+	Token          string `json:"token"`
+	Identity       string `json:"identity"`
+	OssId          string `json:"oss_id"`
+	OssHdId        string `json:"oss_hd_id"`
+	Type           string `json:"type"`
+}
+func addHbtv(key string, name string, id string){
+	referinfos[key] = &RerferInfo{
+		Id:     id,
+		Key:    key,
+		Jump:   true,
+		Name:   name,
+		Referer: "http://app.cjyun.org/",
+		urlFmt: "http://app.cjyun.org/video/player/stream?stream_id=%s&site_id=10008",
+		afterFunc: func(refererInfo RerferInfo, url string, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request) {
+			body, err := ioutil.ReadAll(bodyReader)
+			if err != nil {
+				http.Error(w, http.StatusText(503), 503)
+			}
+
+			result := HbTvResult{}
+
+			_ =json.Unmarshal(body, &result)
+
+			w.Header().Set("Content-Type", "audio/x-mpegurl")
+			http.RedirectHandler(string(result.Stream),302).ServeHTTP(w, r)
+		},
+	}
+}
+
+func reverseString(str string) string{
 	runes := []rune(str)
 	for from, to := 0, len(runes)-1; from < to; from, to = from+1, to-1 {
 		runes[from], runes[to] = runes[to], runes[from]
@@ -492,7 +772,6 @@ func reverseString(str string) string {
 	return string(runes)
 
 }
-
 func init() {
 	addCetv("CETV-1", "cetv1")
 	addCetv("CETV-2", "cetv2")
@@ -529,9 +808,7 @@ func init() {
 	addSztv("SZLG", "uGzbXhS")
 	addSztv("SZYDSX", "wDF6KJ3")
 	addSztv("SZDVSH", "xO1xQFv")
-
 	addCqtv("CQWS", "重庆卫视 HD", "4918")
-
 	addXjtv("XJSE", "新疆少儿 HD", "zb12")
 	addXjtv("XJWS", "新疆卫视 HD", "zb01")
 	addXjtv("XJWWE", "新疆维吾尔语综合 HD", "zb02")
@@ -543,6 +820,48 @@ func init() {
 	addXjtv("XJWWEJJSH", "新疆维吾尔经济生活 HD", "zb09")
 	addXjtv("XJHYTYJK", "新疆汉语体育健康 HD", "zb10")
 	addXjtv("XJHYXXFW", "新疆汉语信息服务 HD", "zb10")
+	addJxtv("JXWS", "江西卫视 HD", "tv_jxtv1")
+	addJxtv("JXDS", "江西都市频道 HD", "tv_jxtv2")
+	addJxtv("JXJJSH", "江西经济生活频道 HD", "tv_jxtv3_hd")
+	addJxtv("JXYSLY", "江西影视旅游频道 HD", "tv_jxtv4")
+	addJxtv("JXGGNY", "江西公共农业频道 HD", "tv_jxtv5")
+	addJxtv("JXSE", "江西少儿频道 HD", "tv_jxtv6")
+	addJxtv("JXXW", "江西新闻频道 HD", "tv_jxtv7")
+	addJxtv("JXYD", "江西移动电视 HD", "tv_jxtv8")
+	addJxtv("JXFSGW", "江西风尚购物 HD", "tv_fsgw")
+	addJxtv("JXTC", "江西陶瓷频道 HD", "tv_taoci")
+	addGztv("GZWS", "贵州卫视 HD", "ch01")
+	addGztv("GZGG", "贵州公共 HD", "ch02")
+	addGztv("GZYSWY", "贵州影视文艺 HD", "ch03")
+	addGztv("GZDZSH", "贵州大众生活 HD", "ch04")
+	addGztv("GZD5", "贵州第5频道 HD", "ch05")
+	addGztv("GZKJJK", "贵州科教健康 HD", "ch06")
+	addGztv("GZSZYD", "贵州数字移动 HD", "ch07")
+	addCdtv("CDXWZH", "成都新闻综合 HD", "1")
+	addCdtv("CDJJZX", "成都经济咨询 HD", "2")
+	addCdtv("CDDSSH", "成都都市生活 HD", "3")
+	addCdtv("CDYSWY", "成都影视文艺 HD", "4")
+	addCdtv("CDGG", "成都公共 HD", "5")
+	addCdtv("CDSE", "成都少儿 HD", "6")
+	addAhtv("AHWS", "安徽卫视 HD", "47")
+	addAhtv("AHJJSH", "安徽经济生活 HD", "71")
+	addAhtv("AHZYTY", "安徽综艺体育 HD", "73")
+	addAhtv("AHYS", "安徽影视 HD", "72")
+	addAhtv("AHGJ", "安徽国际 HD", "50")
+	addAhtv("AHNYKJ", "安徽农业科教 HD", "51")
+	addAhtv("AHGJ", "安徽国际 HD", "70")
+	addAhtv("AHYD", "安徽移动电视 HD", "68")
+	addAhtv("AHJC", "睛彩安徽 HD", "85")
+	addHbtv("HBLS", "湖北垄上 HD", "438")
+	addHbtv("MJGW", "湖北美嘉购物 HD", "439")
+	addHbtv("HBJY", "湖北教育 HD", "437")
+	addHbtv("HBSH", "湖北生活 HD", "436")
+	addHbtv("HBYS", "湖北影视 HD", "435")
+	addHbtv("HBGG", "湖北公共 HD", "434")
+	addHbtv("HBZH", "湖北综合 HD", "433")
+	addHbtv("HBJS", "湖北经视 HD", "432")
+	addHbtv("HBWS", "湖北卫视 HD", "431")
+	addHbtv("HBXW", "湖北新闻 HD", "470")
 }
 
 func AESDownloadHandler(w http.ResponseWriter, r *http.Request) {
@@ -586,6 +905,7 @@ func AESDownloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	block, err := aes.NewCipher(key)
 
+
 	if err != nil {
 		http.Error(w, err.Error(), 503)
 		return
@@ -626,18 +946,7 @@ func TransferHandler(w http.ResponseWriter, r *http.Request) {
 	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
 	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
 	req.Header.Set("sec-ch-ua-mobile", "?0")
-	req.Header.Set("sec-ch-ua-platform", "Windows")curl 'https://app.jxntv.cn/Qiniu/liveauth/getPCAuth.php' \
-  -H 'Connection: keep-alive' \
-  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"' \
-  -H 'Authorization: f41835cf7e401627f45202f824bea7ac' \
-  -H 'Content-Type: application/x-www-form-urlencoded;charset=UTF-8' \
-  -H 'sec-ch-ua-mobile: ?0' \
-  -H 'User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36' \
-  -H 'Origin: http://www.jxntv.cn' \
-  -H 'Referer: http://www.jxntv.cn/' \
-  -H 'Accept-Language: zh-CN,zh;q=0.9' \
-  --data-raw 't=1609229748&stream=tv_jxtv6.m3u8&'
-	}
+	req.Header.Set("sec-ch-ua-platform", "Windows")
 	req.Header.Set("sec-fetch-dest", "empty")
 	req.Header.Set("sec-fetch-site", "cross-site")
 	req.Header.Set("sec-fetch-mode", "cors")
@@ -735,7 +1044,40 @@ func RefererHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 503)
 		return
 	}
+
+
 	if referinfo.afterFunc == nil {
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			http.Error(w, err.Error(), 503)
+			return
+		}
+		if referinfo.prefix != "" {
+			w.Header().Set("Content-Type", "audio/x-mpegurl")
+
+			var newbody []byte
+			if strings.HasSuffix(referinfo.prefix, "/"){
+				newbody = reRegx.ReplaceAll(body, []byte(referinfo.prefix+"$0"))
+			} else {
+				newbody = reRegx.ReplaceAll(body, []byte(referinfo.prefix+"/$0"))
+			}
+
+
+			logrus.Info(string(newbody))
+			w.Header().Set("Content-Type", "audio/x-mpegurl")
+
+			w.Write(newbody)
+		} else {
+			w.Header().Set("Content-Type", "audio/x-mpegurl")
+			w.Write(body)
+		}
+	} else {
+		referinfo.afterFunc(*referinfo, url, resp.Body, w, r)
+	}
+
+}		
 		defer resp.Body.Close()
 
 		body, err := ioutil.ReadAll(resp.Body)
