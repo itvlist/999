@@ -59,6 +59,8 @@ func main() {
 	http.HandleFunc("/vip2", handlers.Vip2Handler)
 	http.HandleFunc("/referer", handlers.RefererHandler)
 	http.HandleFunc("/transfer", handlers.TransferHandler)
+	http.HandleFunc("/ats", handlers.AESDownloadHandler)
+
 	http.HandleFunc("/maotv", handlers.MaoTvHandler)
 
 	//http.HandleFunc("/", handlers.ByrApiHandler)
@@ -66,7 +68,5 @@ func main() {
 	if err != nil {
 		logrus.Error(err)
 	}
-
-
 
 }

@@ -13,6 +13,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -25,14 +26,14 @@ import (
 var host = utils.GetIP()
 
 type RerferInfo struct {
-	Id string
-	Key string
-	Name string
-	Referer string
-	urlFmt string
-	Jump bool
-	reRegxp *regexp.Regexp
-	prefix string
+	Id           string
+	Key          string
+	Name         string
+	Referer      string
+	urlFmt       string
+	Jump         bool
+	reRegxp      *regexp.Regexp
+	prefix       string
 	urlBuildFunc func(refererInfo RerferInfo) string
 	beforeFunc   func(refererInfo RerferInfo, url string, header http.Header)
 	afterFunc    func(refererInfo RerferInfo, url string, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request)
@@ -40,33 +41,6 @@ type RerferInfo struct {
 
 var reRegx2 = regexp.MustCompilePOSIX(`([^#]+\.ts)`)
 
-/***
- *
- <?php
-$id = isset($_GET['id']) ? $_GET['id'] : 'cetv1';
-$n = array(
-    'cetv1' => 695,
-    'cetv2' => 696,
-    'cetv3' => 697,
-    'cetv4' => 698,
-);
-$ch = curl_init('http://app.cetv.cn/video/player/stream?site_id=10001&stream_id=' . $n[$id]);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-$data = curl_exec($ch);
-curl_close($ch);
-$playUrl = json_decode($data)->stream;
-$pathArr = explode("/", $playUrl);
-$endPath = $pathArr[sizeof($pathArr) - 1];
-$endPath = str_replace(".m3u8", "", $endPath);
-$c = curl_init($playUrl);
-curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
-curl_setopt($c, CURLOPT_HTTPHEADER, array("Referer: http://app.cetv.cn"));
-$result = curl_exec($c);
-curl_close($c);
-$ts = str_replace($endPath, "http://txycsbl.centv.cn/zb/" . $endPath, $result);
-print_r($ts);
-?>
-*/
 var referinfos = make(map[string]*RerferInfo, 0)
 
 func addCetv(name string, id string) {
@@ -225,7 +199,7 @@ func addGdtv(name string, id string) {
 			header.Set("Referer", "https://www.gdtv.cn/")
 
 		},
-		afterFunc: func(refererInfo RerferInfo, url string, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request) {
+		afterFunc: func(refererInfo RerferInfo, srcUrl string, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request) {
 			defer bodyReader.Close()
 			body, err := ioutil.ReadAll(bodyReader)
 			if err != nil {
@@ -236,9 +210,12 @@ func addGdtv(name string, id string) {
 			err = json.Unmarshal(body, &gdtvQueryResult)
 			gdtvPlayUrlResult := gdtvPlayUrlResult{}
 			err = json.Unmarshal([]byte(gdtvQueryResult.PlayUrl), &gdtvPlayUrlResult)
-			urlstr := fmt.Sprintf("http://%s:8880/transfer?url=%s&referer=%s",host,
-				base64.StdEncoding.EncodeToString([]byte(gdtvPlayUrlResult.Hd)),
-				base64.StdEncoding.EncodeToString([]byte("https://www.gdtv.cn/")))
+
+			values := url.Values{}
+			values.Set("url", gdtvPlayUrlResult.Hd)
+			values.Set("referer", "https://www.gdtv.cn/")
+
+			urlstr := fmt.Sprintf("http://%s:8880/transfer?%s", host, values.Encode())
 			w.Header().Set("Content-Type", "audio/x-mpegurl")
 			http.RedirectHandler(urlstr, 302).ServeHTTP(w, r)
 
@@ -313,11 +290,11 @@ func addSztv(name string, id string) {
 	}
 }
 
-func addCqtv(key string, name string, id string, ){
+func addCqtv(key string, name string, id string) {
 	referinfos[key] = &RerferInfo{
-		Id: id,
-		Key: key,
-		Name: name,
+		Id:     id,
+		Key:    key,
+		Name:   name,
 		urlFmt: "https://web.cbg.cn/live/getLiveUrl?url=%s",
 		urlBuildFunc: func(refererInfo RerferInfo) string {
 
@@ -327,7 +304,7 @@ func addCqtv(key string, name string, id string, ){
 				return ""
 			}
 			req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
-			req.Header.Set("user-agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+			req.Header.Set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				return ""
@@ -340,26 +317,51 @@ func addCqtv(key string, name string, id string, ){
 			urlResult := utils.MatchOneOf(string(body), "\"ios_HDlive_url\":\"([^\"]+)")[1]
 			return fmt.Sprintf(refererInfo.urlFmt, urlResult)
 		},
-		afterFunc: func(refererInfo RerferInfo,url string,  bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request) {
+		afterFunc: func(refererInfo RerferInfo, srcUrl string, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request) {
 			defer bodyReader.Close()
 			body, err := ioutil.ReadAll(bodyReader)
 			if err != nil {
 				http.Error(w, err.Error(), 503)
 				return
 			}
-			urlResult := utils.MatchOneOf(string(body), "\"url\":\"([^\"]+)")[1]
-
+			urlResult := utils.MatchOneOf(string(body), "\"url\"[ ]*:[ ]*\"([^\"]+)")[1]
+			proxyUrl := fmt.Sprintf("http://%s:8880/ats?file=", host)
 			index := strings.LastIndex(urlResult, "/")
-
-			realUrl := fmt.Sprintf("http://%s:8880/transfer?url=%s&referer=%s&prefix=%s",host,
-				base64.StdEncoding.EncodeToString([]byte(urlResult)),
-				base64.StdEncoding.EncodeToString([]byte("https://www.cbg.cn/")),
-				base64.StdEncoding.EncodeToString([]byte(urlResult[0:index])))
+			values := url.Values{}
+			values.Set("url", urlResult)
+			values.Set("srcUrl", urlResult[0:index])
+			values.Set("proxy", proxyUrl)
+			values.Set("key", getKey())
+			values.Set("referer", "https://www.cbg.cn/")
+			realUrl := fmt.Sprintf("http://%s:8880/transfer?%s", host, values.Encode())
 			w.Header().Set("Content-Type", "audio/x-mpegurl")
-			http.RedirectHandler(realUrl, 302).ServeHTTP(w,r)
+			http.RedirectHandler(realUrl, 302).ServeHTTP(w, r)
 		},
 	}
 }
+
+func getKey() string {
+	url := "https://sjlivecdnx.cbg.cn/1ive/stream_2.php"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
+	req.Header.Set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+	req.Header.Set("referer", "https://www.cbg.cn/")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return ""
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return ""
+	}
+	return hex.EncodeToString(body)
+}
+
 type xjParamInfo struct {
 	Paramslist struct {
 		Language           string `json:"language"`
@@ -432,8 +434,8 @@ type xjEncryptInfo struct {
 	PlaybackLiveHost string `json:"PlaybackLiveHost"`
 }
 
-func addXjtv(key string, name string, id string){
-	PKCS7UnPadding :=func(origData []byte) []byte {
+func addXjtv(key string, name string, id string) {
+	PKCS7UnPadding := func(origData []byte) []byte {
 		length := len(origData)
 		unpadding := int(origData[length-1])
 		return origData[:(length - unpadding)]
@@ -441,94 +443,54 @@ func addXjtv(key string, name string, id string){
 	referinfos[key] = &RerferInfo{
 		Id:     id,
 		Key:    key,
-		Jump: true,
+		Jump:   true,
 		Name:   name,
 		prefix: "http://livehyw5.chinamcache.com/hyw/",
 		urlFmt: "http://livehyw5.chinamcache.com/hyw/%s.m3u8?txSecret=%s&txTime=%s",
 		urlBuildFunc: func(refererInfo RerferInfo) string {
-			url := fmt.Sprintf("http://mediaxjtvs.chinamcache.com/hyw/media/playerJson/liveChannel/7d40edeb62fe4f8a9d9a08bc653dcab6_PlayerParamProfile.json")
-			req, err := http.NewRequest("GET", url, nil)
-			if err != nil {
-				return ""
-			}
-			req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
-			req.Header.Set("user-agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				return ""
-			}
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
+			return "http://mediaxjtvs.chinamcache.com/hyw/media/playerJson/liveChannel/7d40edeb62fe4f8a9d9a08bc653dcab6_PlayerParamProfile.json"
+		},
+		afterFunc: func(refererInfo RerferInfo, url string, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request) {
+			defer bodyReader.Close()
 
+			body, err := ioutil.ReadAll(bodyReader)
 			if err != nil {
-				return ""
+				http.Error(w, err.Error(), 503)
+				return
 			}
+
 			paramInfo := xjParamInfo{}
 			json.Unmarshal(body, &paramInfo)
 			block, err := aes.NewCipher([]byte("roZ68Okc5MUTMraM"))
 			result, _ := hex.DecodeString(paramInfo.ParamsConfig.CdnConfigEncrypt)
 			//blockSize := block.BlockSize()
 			//tmp := ZeroPadding([]byte(data), blockSize)
-			mode := cipher.NewCBCDecrypter(block,[]byte("7384627385960726"))
-			text :=  make([]byte, len(result))
-			mode.CryptBlocks(text ,result)
+			mode := cipher.NewCBCDecrypter(block, []byte("7384627385960726"))
+			text := make([]byte, len(result))
+			mode.CryptBlocks(text, result)
 
-			encInfoList := make([]xjEncryptInfo,0)
+			encInfoList := make([]xjEncryptInfo, 0)
 			value := PKCS7UnPadding(text)
 			json.Unmarshal(value, &encInfoList)
-			invalidTime, _ := strconv.ParseInt(encInfoList[0].InvalidTime, 10,64)
-			timestamp := strconv.FormatInt(time.Now().Unix() + invalidTime, 16)
+			invalidTime, _ := strconv.ParseInt(encInfoList[0].InvalidTime, 10, 64)
+			timestamp := strconv.FormatInt(time.Now().Unix()+invalidTime, 16)
 			h := md5.New()
 			h.Write([]byte(encInfoList[0].EncryptKey + refererInfo.Id + timestamp))
 			a := h.Sum(nil)
-			realUrl := fmt.Sprintf(refererInfo.urlFmt, refererInfo.Id,hex.EncodeToString(a), timestamp)
-			return realUrl
+			realUrl := fmt.Sprintf(refererInfo.urlFmt, refererInfo.Id, hex.EncodeToString(a), timestamp)
+			w.Header().Set("Content-Type", "audio/x-mpegurl")
+			http.RedirectHandler(realUrl, 302).ServeHTTP(w, r)
 		},
 	}
 }
 
-
-func reverseString(str string) string{
+func reverseString(str string) string {
 	runes := []rune(str)
 	for from, to := 0, len(runes)-1; from < to; from, to = from+1, to-1 {
 		runes[from], runes[to] = runes[to], runes[from]
 	}
 	return string(runes)
 
-}
-
-func m() {
-	req, err := http.NewRequest("GET", " gdtvPlayUrlResult.Hd", nil)
-
-	if err != nil {
-		//http.Error(w, err.Error(), 503)
-		return
-	}
-
-	req.Header.Set("authority", "tcdn.itouchtv.cn")
-	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
-	req.Header.Set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
-	req.Header.Set("Referer", "https://www.gdtv.cn/")
-	req.Header.Set("sec-ch-ua-mobile", "?0")
-	req.Header.Set("sec-ch-ua-platform", "macOS")
-	req.Header.Set("accept", `*/*`)
-	req.Header.Set("sec-fetch-dest", "empty")
-	req.Header.Set("sec-fetch-site", "cross-site")
-	req.Header.Set("sec-fetch-mode", "cors")
-	req.Header.Set("origin", `https://www.gdtv.cn`)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		//	http.Error(w, err.Error(), 503)
-		return
-	}
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		//http.Error(w, err.Error(), 503)
-		return
-	}
-	//w.Write(body)
 }
 
 func init() {
@@ -553,7 +515,6 @@ func init() {
 	addGdtv("GDXDJY", "13")
 	addGdtv("GDYD", "74")
 	addGdtv("GRTNWHPD", "75")
-
 	addSztv("SZWS", "AxeFRth")
 	addSztv("SZYL", "1q4iPng")
 	addSztv("SZSE", "1SIQj6s")
@@ -569,11 +530,72 @@ func init() {
 	addSztv("SZYDSX", "wDF6KJ3")
 	addSztv("SZDVSH", "xO1xQFv")
 
-	addCqtv("CQWS", "重庆卫视 HD","4918")
+	addCqtv("CQWS", "重庆卫视 HD", "4918")
 
 	addXjtv("XJSE", "新疆少儿 HD", "zb12")
 	addXjtv("XJWS", "新疆卫视 HD", "zb01")
+	addXjtv("XJWWE", "新疆维吾尔语综合 HD", "zb02")
+	addXjtv("XJHSK", "新疆哈萨克语综合 HD", "zb03")
+	addXjtv("XJHYZY", "新疆汉语综艺 HD", "zb04")
+	addXjtv("XJWWEYS", "新疆维吾尔影视 HD", "zb05")
+	addXjtv("XJHYJJSH", "新疆汉语经济生活 HD", "zb07")
+	addXjtv("XJHSKZY", "新疆哈萨克语综艺 HD", "zb08")
+	addXjtv("XJWWEJJSH", "新疆维吾尔经济生活 HD", "zb09")
+	addXjtv("XJHYTYJK", "新疆汉语体育健康 HD", "zb10")
+	addXjtv("XJHYXXFW", "新疆汉语信息服务 HD", "zb10")
+}
 
+func AESDownloadHandler(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, http.StatusText(503), 503)
+		return
+	}
+	src := r.Form.Get("src")
+	keySrc := r.Form.Get("key")
+	file := r.Form.Get("file")
+	referer := r.Form.Get("referer")
+	req, err := http.NewRequest("GET", src+"/"+file, nil)
+
+	if err != nil {
+		http.Error(w, err.Error(), 503)
+		return
+	}
+
+	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
+	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
+	if referer != "" {
+		req.Header.Set("Referer", referer)
+	}
+
+	req.Header.Set("sec-ch-ua-mobile", "?0")
+	req.Header.Set("sec-ch-ua-platform", "Windows")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		http.Error(w, err.Error(), 503)
+		return
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, err.Error(), 503)
+		return
+	}
+
+	key, _ := hex.DecodeString(keySrc)
+
+	block, err := aes.NewCipher(key)
+
+	if err != nil {
+		http.Error(w, err.Error(), 503)
+		return
+	}
+
+	blockMode := cipher.NewCBCDecrypter(block, key[:block.BlockSize()])
+	origData := make([]byte, len(body))
+	blockMode.CryptBlocks(origData, body)
+	w.Header().Add("Content-Type", "video/MP2T")
+	w.Write(origData)
 }
 
 func TransferHandler(w http.ResponseWriter, r *http.Request) {
@@ -583,27 +605,39 @@ func TransferHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(503), 503)
 		return
 	}
-	url := r.Form.Get("url")
+	rUrl := r.Form.Get("url")
 	referer := r.Form.Get("referer")
 	prefix := r.Form.Get("prefix")
-	urlb ,err := base64.StdEncoding.DecodeString(url)
-	refererb, err:=  base64.StdEncoding.DecodeString(referer)
-	prefixb, err:=  base64.StdEncoding.DecodeString(prefix)
+	key := r.Form.Get("key")
+	proxy := r.Form.Get("proxy")
+	srcUrl := r.Form.Get("srcUrl")
+	println("==" + prefix)
+	//urlb, err := base64.StdEncoding.DecodeString(url)
+	//refererb, err := base64.StdEncoding.DecodeString(referer)
+	//prefixb, err := base64.StdEncoding.DecodeString(prefix)
 
-	req, err := http.NewRequest("GET", string(urlb), nil)
+	req, err := http.NewRequest("GET", rUrl, nil)
 
 	if err != nil {
 		http.Error(w, err.Error(), 503)
 		return
 	}
-	print(string(urlb))
-	print(string(refererb))
+
 	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
 	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
-	req.Header.Set("Referer", string(refererb))
 	req.Header.Set("sec-ch-ua-mobile", "?0")
-	req.Header.Set("sec-ch-ua-platform", "Windows")
-	req.Header.Set("accept", `*/*`)
+	req.Header.Set("sec-ch-ua-platform", "Windows")curl 'https://app.jxntv.cn/Qiniu/liveauth/getPCAuth.php' \
+  -H 'Connection: keep-alive' \
+  -H 'sec-ch-ua: " Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"' \
+  -H 'Authorization: f41835cf7e401627f45202f824bea7ac' \
+  -H 'Content-Type: application/x-www-form-urlencoded;charset=UTF-8' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36' \
+  -H 'Origin: http://www.jxntv.cn' \
+  -H 'Referer: http://www.jxntv.cn/' \
+  -H 'Accept-Language: zh-CN,zh;q=0.9' \
+  --data-raw 't=1609229748&stream=tv_jxtv6.m3u8&'
+	}
 	req.Header.Set("sec-fetch-dest", "empty")
 	req.Header.Set("sec-fetch-site", "cross-site")
 	req.Header.Set("sec-fetch-mode", "cors")
@@ -619,14 +653,31 @@ func TransferHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 503)
 		return
 	}
-	w.Header().Set("Content-Type", "audio/x-mpegurl")
+	var newbody []byte
+	if proxy != "" {
+		suffix := ""
+		if key != "" && srcUrl != "" {
+			values := url.Values{}
+			values.Set("src", srcUrl)
+			values.Set("key", key)
+			suffix = values.Encode()
+		}
 
-	if prefixb != nil {
-		var newbody []byte
-		if strings.HasSuffix(string(prefixb), "/"){
-			newbody = reRegx.ReplaceAll(body, []byte(string(prefixb)+"$0"))
+		if strings.HasSuffix(proxy, "/") {
+			newbody = reRegx.ReplaceAll(body, []byte(proxy+"$0?"+suffix))
+		} else if strings.HasSuffix(proxy, "=") {
+			newbody = reRegx.ReplaceAll(body, []byte(proxy+"$0&"+suffix))
 		} else {
-			newbody = reRegx.ReplaceAll(body, []byte(string(prefixb)+"/$0"))
+			newbody = reRegx.ReplaceAll(body, []byte(proxy+"/$0?"+suffix))
+		}
+		w.Write(newbody)
+	} else if prefix != "" {
+		if strings.HasSuffix(prefix, "/") {
+
+			newbody = reRegx.ReplaceAll(body, []byte(prefix+"$0"))
+		} else {
+			println(prefix + "/$0")
+			newbody = reRegx.ReplaceAll(body, []byte(prefix+"/$0"))
 		}
 		w.Write(newbody)
 	} else {
@@ -696,12 +747,11 @@ func RefererHandler(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "audio/x-mpegurl")
 
 			var newbody []byte
-			if strings.HasSuffix(referinfo.prefix, "/"){
+			if strings.HasSuffix(referinfo.prefix, "/") {
 				newbody = reRegx.ReplaceAll(body, []byte(referinfo.prefix+"$0"))
 			} else {
 				newbody = reRegx.ReplaceAll(body, []byte(referinfo.prefix+"/$0"))
 			}
-
 
 			logrus.Info(string(newbody))
 			w.Header().Set("Content-Type", "audio/x-mpegurl")
