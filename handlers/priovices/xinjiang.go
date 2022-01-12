@@ -14,7 +14,7 @@ import (
 	"time"
 	"wmenjoy.com/iptv/handlers"
 )
-
+//玛纳斯综合频道 http://218.84.127.245:1026/hls/main1/playlist.m3u8
 func init()  {
 	addXjtv("XJSE", "新疆少儿 HD", "zb12")
 	addXjtv("XJWS", "新疆卫视 HD", "zb01")
