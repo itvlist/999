@@ -16,17 +16,17 @@ import (
 )
 //玛纳斯综合频道 http://218.84.127.245:1026/hls/main1/playlist.m3u8
 func init()  {
-	addXjtv("XJSE", "新疆少儿 HD", "zb12")
-	addXjtv("XJWS", "新疆卫视 HD", "zb01")
-	addXjtv("XJWWE", "新疆维吾尔语综合 HD", "zb02")
-	addXjtv("XJHSK", "新疆哈萨克语综合 HD", "zb03")
-	addXjtv("XJHYZY", "新疆汉语综艺 HD", "zb04")
-	addXjtv("XJWWEYS", "新疆维吾尔影视 HD", "zb05")
-	addXjtv("XJHYJJSH", "新疆汉语经济生活 HD", "zb07")
-	addXjtv("XJHSKZY", "新疆哈萨克语综艺 HD", "zb08")
-	addXjtv("XJWWEJJSH", "新疆维吾尔经济生活 HD", "zb09")
-	addXjtv("XJHYTYJK", "新疆汉语体育健康 HD", "zb10")
-	addXjtv("XJHYXXFW", "新疆汉语信息服务 HD", "zb10")
+	addXjtv("XJSE", "新疆少儿", "zb12", "少儿", "高清")
+	addXjtv("XJWS", "新疆卫视", "zb01", "卫视", "高清")
+	addXjtv("XJWWE", "新疆维吾尔语综合", "zb02", "综合", "高清")
+	addXjtv("XJHSK", "新疆哈萨克语综合", "zb03", "综合", "高清")
+	addXjtv("XJHYZY", "新疆汉语综艺", "zb04", "综艺", "高清")
+	addXjtv("XJWWEYS", "新疆维吾尔影视", "zb05", "影视", "高清")
+	addXjtv("XJHYJJSH", "新疆汉语经济生活 HD", "zb07", "经济", "高清")
+	addXjtv("XJHSKZY", "新疆哈萨克语综艺 HD", "zb08", "综艺", "高清")
+	addXjtv("XJWWEJJSH", "新疆维吾尔经济生活 HD", "zb09", "经济", "高清")
+	addXjtv("XJHYTYJK", "新疆汉语体育健康 HD", "zb10", "体育", "高清")
+	addXjtv("XJHYXXFW", "新疆汉语信息服务 HD", "zb10", "科教", "高清")
 }
 
 
@@ -102,7 +102,7 @@ type xjEncryptInfo struct {
 	PlaybackLiveHost string `json:"PlaybackLiveHost"`
 }
 
-func addXjtv(key string, name string, id string) {
+func addXjtv(key string, name string, id string, category string, quality string) {
 	PKCS7UnPadding := func(origData []byte) []byte {
 		length := len(origData)
 		unpadding := int(origData[length-1])
@@ -112,7 +112,10 @@ func addXjtv(key string, name string, id string) {
 		Id:     id,
 		Key:    key,
 		Jump:   true,
-		Name:   name,
+		Group: "新疆",
+		Category: category,
+		Name:  name,
+		Quality: quality,
 		Prefix: "http://livehyw5.chinamcache.com/hyw/",
 		UrlFmt: "http://livehyw5.chinamcache.com/hyw/%s.m3u8?txSecret=%s&txTime=%s",
 		UrlBuildFunc: func(refererInfo handlers.RerferInfo) string {

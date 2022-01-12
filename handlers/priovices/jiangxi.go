@@ -16,16 +16,16 @@ import (
 )
 
 func init()  {
-	addJxtv("JXWS", "江西卫视 HD", "tv_jxtv1")
-	addJxtv("JXDS", "江西都市频道 HD", "tv_jxtv2")
-	addJxtv("JXJJSH", "江西经济生活频道 HD", "tv_jxtv3_hd")
-	addJxtv("JXYSLY", "江西影视旅游频道 HD", "tv_jxtv4")
-	addJxtv("JXGGNY", "江西公共农业频道 HD", "tv_jxtv5")
-	addJxtv("JXSE", "江西少儿频道 HD", "tv_jxtv6")
-	addJxtv("JXXW", "江西新闻频道 HD", "tv_jxtv7")
-	addJxtv("JXYD", "江西移动电视 HD", "tv_jxtv8")
-	addJxtv("JXFSGW", "江西风尚购物 HD", "tv_fsgw")
-	addJxtv("JXTC", "江西陶瓷频道 HD", "tv_taoci")
+	addJxtv("JXWS", "江西卫视 HD", "tv_jxtv1","卫视","720")
+	addJxtv("JXDS", "江西都市频道 HD", "tv_jxtv2","综合","720")
+	addJxtv("JXJJSH", "江西经济生活频道 HD", "tv_jxtv3_hd","财经","720")
+	addJxtv("JXYSLY", "江西影视旅游频道 HD", "tv_jxtv4","文旅","720")
+	addJxtv("JXGGNY", "江西公共农业频道 HD", "tv_jxtv5","农业","720")
+	addJxtv("JXSE", "江西少儿频道 HD", "tv_jxtv6","少儿","720")
+	addJxtv("JXXW", "江西新闻频道 HD", "tv_jxtv7","新闻","720")
+	addJxtv("JXYD", "江西移动电视 HD", "tv_jxtv8","综合","720")
+	addJxtv("JXFSGW", "江西风尚购物 HD", "tv_fsgw","购物","720")
+	addJxtv("JXTC", "江西陶瓷频道 HD", "tv_taoci","其他","720")
 }
 
 type JxtvAuthResult struct {
@@ -36,12 +36,15 @@ type JxtvAuthResult struct {
 	Token  string `json:"token"`
 }
 
-func addJxtv(key string, name string, id string) {
+func addJxtv(key string, name string, id string,category string, quality string) {
 	handlers.RefererInfos[key] = &handlers.RerferInfo{
 		Id:      id,
 		Key:     key,
 		Jump:    true,
 		Name:    name,
+		Group: "江西",
+		Category: category,
+		Quality: quality,
 		Referer: "http://www.jxntv.cn/",
 		UrlFmt:  "https://live.jxtvcn.com.cn/live-jxtv/%s.m3u8?source=pc&t=%s&token=%s",
 		UrlBuildFunc: func(refererInfo handlers.RerferInfo) string {
