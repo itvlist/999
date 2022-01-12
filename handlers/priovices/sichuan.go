@@ -36,8 +36,7 @@ func init()  {
 	addSctv("XKGW", "四川星空购物", "SCTV6", "购物","720")
 	addSctv("SCFNET", "四川妇女儿童", "SCTV7", "少儿","720")
 	addSctv("SCKBWS", "四川康巴卫视", "Kangba", "卫视","720")
-
-
+	addSctv("SCXC", "四川公共乡村", "SCTV9", "农民","720")
 	addCdtv("CDXWZH", "成都新闻综合", "1", "综合","普清")
 	addCdtv("CDJJZX", "成都经济咨询", "2", "财经","普清")
 	addCdtv("CDDSSH", "成都都市生活", "3", "综合","普清")
