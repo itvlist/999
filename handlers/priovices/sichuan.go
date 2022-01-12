@@ -18,6 +18,10 @@ import (
 四川星空购物,http://scgctvshow.sctv.com/hdlive/sctv6/index.m3u8
 四川科教,http://3017ugjo.live2.danghongyun.com/live/hls/4dc0e927160647a2bd585cb5495810be/3c2126c925204cddb74a3534b97e2765-1.m3u8
 四川经济,http://scgctvshow.sctv.com/hdlive/sctv3/index.m3u8
+四川·康巴卫视,http://scgctvshow.sctv.com:80/hdlive/kangba/1.m3u8
+四川·康巴卫视,http://scgctvshow.sctv.com/hdlive/kangba/1.m3u8
+四川公共乡村,http://scgctvshow.sctv.com/hdlive/sctv9/index.m3u8
+四川公共乡村,http://scgctvshow.sctv.com/hdlive/sctv9/1.m3u8
 四川乡村 http://m3u8.sctv.com/tvlive/SCTV9/index.m3u8
 四川卫视 http://m3u8.sctv.com/tvlive/SCTV0/index.m3u8
 四川科教 http://m3u8.sctv.com/tvlive/SCTV8/index.m3u8
