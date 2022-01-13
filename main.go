@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"wmenjoy.com/iptv/handlers"
 	_ "wmenjoy.com/iptv/handlers/priovices"
+	_ "wmenjoy.com/iptv/handlers/channels"
 )
 
 func main() {

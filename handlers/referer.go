@@ -5,30 +5,33 @@ import (
 	"crypto/cipher"
 	"encoding/hex"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/sirupsen/logrus"
+	"wmenjoy.com/iptv/utils"
 )
+
 type RerferInfo struct {
 	Id           string
 	Key          string
 	Name         string
-	Group		string
-	Category	string
-	Quality		string
-	Referer string
-	UrlFmt  string
-	Jump    bool
+	Group        string
+	Category     string
+	Quality      string
+	Referer      string
+	UrlFmt       string
+	Jump         bool
 	DirectReturn bool
 	ReRegxp      *regexp.Regexp
 	Prefix       string
 	UrlBuildFunc func(refererInfo RerferInfo) string
-	BeforeFunc func(refererInfo RerferInfo, url string, header http.Header)
-	AfterFunc  func(refererInfo RerferInfo, url string, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request)
+	BeforeFunc   func(refererInfo RerferInfo, url string, header http.Header)
+	AfterFunc    func(refererInfo RerferInfo, url string, bodyReader io.ReadCloser, w http.ResponseWriter, r *http.Request)
 }
 
 var RefererInfos = make(map[string]*RerferInfo, 0)
@@ -172,7 +175,7 @@ func RefererHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(503), 503)
 		return
 	}
-	url := ""
+	urlstr := ""
 
 	id := r.Form.Get("id")
 	if id == "" {
@@ -188,17 +191,17 @@ func RefererHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if referinfo.UrlBuildFunc == nil {
-		url = fmt.Sprintf(referinfo.UrlFmt, referinfo.Id)
+		urlstr = fmt.Sprintf(referinfo.UrlFmt, referinfo.Id)
 	} else {
-		url = referinfo.UrlBuildFunc(*referinfo)
+		urlstr = referinfo.UrlBuildFunc(*referinfo)
 	}
 
 	if referinfo.DirectReturn {
 		w.Header().Set("Content-Type", "audio/x-mpegurl")
-		http.RedirectHandler(url, 302).ServeHTTP(w, r)
+		http.RedirectHandler(urlstr, 302).ServeHTTP(w, r)
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", urlstr, nil)
 	if err != nil {
 		http.Error(w, err.Error(), 503)
 		return
@@ -206,7 +209,7 @@ func RefererHandler(w http.ResponseWriter, r *http.Request) {
 	req.Header.Set("sec-ch-ua", `" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"`)
 	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36")
 	if referinfo.BeforeFunc != nil {
-		referinfo.BeforeFunc(*referinfo, url, req.Header)
+		referinfo.BeforeFunc(*referinfo, urlstr, req.Header)
 	} else {
 		if referinfo.Referer != "" {
 			req.Header.Set("Referer", referinfo.Referer)
@@ -218,6 +221,18 @@ func RefererHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), 503)
 		return
+	}
+
+	if resp.StatusCode == 302 {
+		location, _ := resp.Location()
+		
+		values := url.Values{}
+		values.Set("url", location.String())
+		values.Set("prefix", location.String()[0:strings.LastIndex(location.String(),"/")])
+
+		urlstring := fmt.Sprintf("http://%s:8880/transfer?%s", utils.GetIP(), values.Encode())
+		w.Header().Set("Content-Type", "audio/x-mpegurl")
+		http.RedirectHandler(urlstring, 302).ServeHTTP(w, r)
 	}
 
 	if referinfo.AfterFunc == nil {
@@ -253,7 +268,7 @@ func RefererHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write(body)
 		}
 	} else {
-		referinfo.AfterFunc(*referinfo, url, resp.Body, w, r)
+		referinfo.AfterFunc(*referinfo, urlstr, resp.Body, w, r)
 	}
 
 }
