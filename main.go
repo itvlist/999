@@ -4,12 +4,13 @@ import (
 	"flag"
 	"net/http"
 	"path/filepath"
+	"wmenjoy.com/iptv/handlers/movies"
 
 	"github.com/mattn/go-colorable"
 	"github.com/sirupsen/logrus"
 	"wmenjoy.com/iptv/handlers"
-	_ "wmenjoy.com/iptv/handlers/priovices"
 	_ "wmenjoy.com/iptv/handlers/channels"
+	_ "wmenjoy.com/iptv/handlers/provinces"
 )
 
 func main() {
@@ -40,7 +41,7 @@ func main() {
 	http.HandleFunc("/neu.m3u8", handlers.NeuHandler)
 	http.HandleFunc("/tuna.m3u8", handlers.TunaHandler)
 	http.HandleFunc("/live/pool/", handlers.FourgtvTsHandler)
-	http.HandleFunc("/live/", handlers.QmHandler)
+	http.HandleFunc("/movies", movies.MovieHandler)
 	http.HandleFunc("/hls/", handlers.Neu6tsHandler)
 	http.HandleFunc("/neu/hls/", handlers.NeutsHandler)
 	http.HandleFunc("/tuna/hls/", handlers.TunaTsHandler)
@@ -66,6 +67,7 @@ func main() {
 	http.HandleFunc("/maotv", handlers.MaoTvHandler)
 	http.HandleFunc("/didy", handlers.DiDyHandler)
 
+	http.HandleFunc("/iptv.m3u8", handlers.TVHandler)
 	//http.HandleFunc("/", handlers.ByrApiHandler)
 	err := http.ListenAndServe(":8880", nil)
 	if err != nil {
