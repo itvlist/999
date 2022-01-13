@@ -17,17 +17,19 @@ import (
 //玛纳斯综合频道 http://218.84.127.245:1026/hls/main1/playlist.m3u8
 func init()  {
 
-	addTvInfo("XJSE", "新疆少儿", "新疆","新疆","少儿","少儿")
-	addTvInfo("XJWS", "新疆卫视", "卫视","新疆","综合","综合")
-	addTvInfo("XJWWE", "新疆维吾尔语综合", "新疆","新疆","综合","综合")
-	addTvInfo("XJHSK", "新疆哈萨克语综合", "新疆","新疆","综合","综合")
-	addTvInfo("XJHYZY", "新疆汉语综艺", "新疆","新疆","综艺","综艺")
-	addTvInfo("XJWWEYS", "新疆维吾尔影视", "新疆","新疆","影视","影视")
-	addTvInfo("XJHYJJSH", "新疆汉语经济生活", "新疆","新疆","财经","财经")
-	addTvInfo("XJHSKZY", "新疆哈萨克语综艺", "新疆","新疆","综艺","综艺")
-	addTvInfo("XJWWEJJSH", "新疆维吾尔经济生活", "新疆","新疆","财经","财经")
-	addTvInfo("XJHYTYJK", "新疆汉语体育健康", "新疆","新疆","综艺","综艺")
-	addTvInfo("XJHYXXFW", "新疆汉语信息服务", "新疆","新疆","综艺","综艺")
+	addTvInfo("XJSE", 51012,"新疆少儿", "新疆","新疆","少儿","少儿",
+		"")
+	addTvInfo("XJWS", 51, "新疆卫视", "卫视","新疆","综合","综合",
+		"http://epg.51zmt.top:8000/tb1/ws/xinjiang.png")
+	addTvInfo("XJWWE", 51002,"新疆维吾尔语综合", "新疆","新疆","综合","综合","")
+	addTvInfo("XJHSK", 51003,"新疆哈萨克语综合", "新疆","新疆","综合","综合", "")
+	addTvInfo("XJHYZY", 51004,"新疆汉语综艺", "新疆","新疆","综艺","综艺", "")
+	addTvInfo("XJWWEYS", 51005,"新疆维吾尔影视", "新疆","新疆","影视","影视", "")
+	addTvInfo("XJHYJJSH", 51007,"新疆汉语经济生活", "新疆","新疆","财经","财经", "")
+	addTvInfo("XJHSKZY", 51008,"新疆哈萨克语综艺", "新疆","新疆","综艺","综艺", "")
+	addTvInfo("XJWWEJJSH", 51009,"新疆维吾尔经济生活", "新疆","新疆","财经","财经", "")
+	addTvInfo("XJHYTYJK", 51010,"新疆汉语体育健康", "新疆","新疆","综艺","综艺","")
+	addTvInfo("XJHYXXFW", 51011,"新疆汉语信息服务", "新疆","新疆","综艺","综艺","")
 
 	addXjtvChannel("XJSE", "zb12", 1,"高清")
 	addXjtvChannel("XJWS", "zb01", 1, "高清")
@@ -54,14 +56,16 @@ func init()  {
 	addXjtv("XJHYXXFW", "新疆汉语信息服务 HD", "zb11", "科教", "高清")
 }
 
-func addTvInfo(key string, name string, group string, subGroup string, category string, subCategory string){
+func addTvInfo(key string, tvTagId int, name string, group string, subGroup string, category string, subCategory string, image string){
 	handlers.TvInfoMap[key] = &handlers.IpTvInfo{
 		Key: key,
 		Name: name,
+		TvTagId: tvTagId,
 		Group: group,
 		SubGroup: subGroup,
 		Category: category,
 		SubCategory: subCategory,
+		Image: image,
 		Channels: make(handlers.IpTVChannelList, 0),
 	}
 }

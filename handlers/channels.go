@@ -18,6 +18,7 @@ type ChannelSource struct {
 	Name string
 	IpList []string
 	Active bool
+	IptvSrcChannelList
 }
 
 func init()  {
@@ -25,11 +26,13 @@ func init()  {
 		Name: "兰州移动",
 		IpList: []string{"39.134.39.39"},
 		Active: true,
+		IptvSrcChannelList : make(IptvSrcChannelList, 0),
 	}
 	ChannelSrcMap[NANJING_MOBILE_SRC] = &ChannelSource{
 		Name: "南京移动",
 		IpList: []string{"39.134.39.39"},
 		Active: true,
+		IptvSrcChannelList : make(IptvSrcChannelList, 0),
 	}
 	ChannelSrcMap[GUANFANG_SRC] = &ChannelSource{
 		Name: "官方网站",
@@ -50,17 +53,27 @@ func AddChannel(key string, newChannel *IpTVChannel) error{
 		}
 	}
 	newChannel.IpTvInfo = tvInfo
-
+	newChannel.Tvid = tvInfo.TvTagId
 	tvInfo.Channels = append(tvInfo.Channels, newChannel)
 
 	sort.Sort(tvInfo.Channels)
 	return nil
 }
 
+type IptvSrcChannelList []*IpTVChannel
+
+func (s IptvSrcChannelList) Len() int           { return len(s) }
+func (s IptvSrcChannelList) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s IptvSrcChannelList) Less(i, j int) bool { return s[i].Tvid < s[j].Tvid }
+
 type IpTVChannelList []*IpTVChannel
+func (s IpTVChannelList) Len() int           { return len(s) }
+func (s IpTVChannelList) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s IpTVChannelList) Less(i, j int) bool { return s[i].Score > s[j].Score }
 type IpTVChannel struct {
 	Key string
 	Src *ChannelSource
+	Tvid int
 	Id  string
 	Redirect bool
 	Alive    bool
@@ -82,9 +95,7 @@ type IpTVChannel struct {
 	AfterFunc  func(channel IpTVChannel, url string, resp *http.Response, w http.ResponseWriter, r *http.Request)
 }
 
-func (s IpTVChannelList) Len() int           { return len(s) }
-func (s IpTVChannelList) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s IpTVChannelList) Less(i, j int) bool { return s[i].Score > s[j].Score }
+
 
 func(c IpTVChannel) getValidRequestUrl() string{
 
@@ -118,7 +129,7 @@ func(c IpTVChannel) getValidRequestUrl() string{
 }
 
 type IpTvInfo struct {
-	TvTagId string
+	TvTagId int
 	Image string
 	Key  string
 	Name string
