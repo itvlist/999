@@ -13,6 +13,7 @@ import (
 )
 
 func init()  {
+	//加密了，不在使用
 	addCqtv("CQWS", "重庆卫视 HD", "4918")
 }
 func getKey() string {

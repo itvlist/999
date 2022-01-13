@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"wmenjoy.com/iptv/handlers"
 )
-
+//含山新闻综合 http://223.241.197.199:1935/live/xinwen/playlist.m3u8
 func init()  {
 	addAhtv("AHWS", "安徽卫视 HD", "47")
 	addAhtv("AHJJSH", "安徽经济生活 HD", "71")
