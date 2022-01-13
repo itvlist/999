@@ -8,11 +8,12 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
 	"wmenjoy.com/iptv/handlers"
 	"wmenjoy.com/iptv/utils"
 )
 
-func init()  {
+func init() {
 	//加密了，不在使用
 	addCqtv("CQWS", "重庆卫视 HD", "4918")
 }
@@ -82,7 +83,7 @@ func addCqtv(key string, name string, id string) {
 			values.Set("key", getKey())
 			values.Set("referer", "https://www.cbg.cn/")
 			realUrl := fmt.Sprintf("http://%s:8880/transfer?%s", host, values.Encode())
-			w.Header().Set("Content-Type", "audio/x-mpegurl")
+			w.Header().Set("Content-Type", "application/vnd.apple.mpegurl;charset=UTF-8")
 			http.RedirectHandler(realUrl, 302).ServeHTTP(w, r)
 		},
 	}

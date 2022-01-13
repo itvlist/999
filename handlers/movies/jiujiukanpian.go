@@ -2,22 +2,24 @@ package movies
 
 import (
 	"fmt"
-	"github.com/iawia002/annie/utils"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/iawia002/annie/utils"
+	"github.com/sirupsen/logrus"
 )
+
 //https://www.jiujiukanpian.com/
-func init()  {
+func init() {
 	MoiveStationMap["https://www.jiujiukanpian.com"] = &MovieStation{
-		Name: "久久影视网",
-		HostUrl: "https://www.jiujiukanpian.com",
+		Name:        "久久影视网",
+		HostUrl:     "https://www.jiujiukanpian.com",
 		ContentType: "application/vnd.apple.mpegurl",
-		Referer: "https://www.jiujiukanpian.com/",
-		RootPath: true,
-		ReRegxp: regexp.MustCompilePOSIX("([^#]+\\.ts)"),
+		Referer:     "https://www.jiujiukanpian.com/",
+		RootPath:    true,
+		ReRegxp:     regexp.MustCompilePOSIX("([^#]+\\.ts)"),
 		UrlBuildFunc: func(requestUrl string, stationInfo MovieStation) string {
 			req, err := http.NewRequest("GET", requestUrl, nil)
 			if err != nil {
@@ -41,49 +43,53 @@ func init()  {
 			if id == "" {
 				return ""
 			}
-			t := id[strings.Index(id, "?") + 1:]
+			t := id[strings.Index(id, "?")+1:]
 			params := strings.Split(t, "&")
 
-			parseUrl := fmt.Sprintf("https://new.79da.com:665/m3u8.php?url=%s_%s",strings.Split(params[0],"=")[1],strings.Split(params[1],"=")[1] )
-
+			parseUrl := fmt.Sprintf("https://new.79da.com:665/m3u8.php?url=%s_%s", strings.Split(params[0], "=")[1], strings.Split(params[1], "=")[1])
 
 			return getRealUrl(parseUrl, stationInfo.Referer)
- 		},
-		 AfterFunc: func(stationInfo MovieStation, url string, resp *http.Response, w http.ResponseWriter, r *http.Request) {
-			 defer resp.Body.Close()
+		},
+		AfterFunc: func(stationInfo MovieStation, url string, resp *http.Response, w http.ResponseWriter, r *http.Request) {
+			defer resp.Body.Close()
 
-			 body, err := ioutil.ReadAll(resp.Body)
-			 if err != nil {
-				 http.Error(w, err.Error(), 503)
-				 return
-			 }
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				http.Error(w, err.Error(), 503)
+				return
+			}
 
-			 prefix := ""
-			 RootPath := false
-			 if strings.HasPrefix(url, "https://tx.haihaiyu.com"){
-				 prefix = "https://tx.haihaiyu.com"
-				 RootPath = true
-			 } else if strings.HasPrefix(url, "https://vod6.wenshibaowenbei.com") {
-				 prefix = "https://vod6.wenshibaowenbei.com"
-				 RootPath = true
-			 }else {
-				 path := url[0:strings.Index(url, "?")]
-				 prefix = path[0:strings.LastIndex(url, "/")]
-			 }
-			 var newbody []byte
-			 regexc := stationInfo.ReRegxp
-			 if strings.HasSuffix(prefix, "/") && RootPath {
-				 newbody = regexc.ReplaceAll(body, []byte(prefix[:len(prefix) - 1]+"$0"))
-			 } else if strings.HasSuffix(prefix, "/") && !RootPath {
-				 newbody = regexc.ReplaceAll(body, []byte(prefix+"$0"))
-			 } else if !strings.HasSuffix(prefix, "/")  && RootPath {
-				 newbody = regexc.ReplaceAll(body, []byte(prefix+"$0"))
-			 } else {
-				 newbody = regexc.ReplaceAll(body, []byte(prefix+"/$0"))
-			 }
-			 //	w.Header().Set("Content-Length", strconv.Itoa(len(newbody)))
-			 w.Write(newbody)
-		 },
+			prefix := ""
+			RootPath := false
+			regexc := stationInfo.ReRegxp
+			suffix := ""
+			replaceElement := "$0"
+			if strings.HasPrefix(url, "https://tx.haihaiyu.com") {
+				prefix = "https://wework.qpic.cn/wwpic/"
+				suffix = "/0"
+				replaceElement = "$1"
+				regexc = regexp.MustCompilePOSIX("[^#]+/([^/]+)\\.ts")
+
+			} else if strings.HasPrefix(url, "https://vod6.wenshibaowenbei.com") {
+				prefix = "https://vod6.wenshibaowenbei.com"
+				RootPath = true
+			} else {
+				path := url[0:strings.Index(url, "?")]
+				prefix = path[0:strings.LastIndex(url, "/")]
+			}
+			var newbody []byte
+			if strings.HasSuffix(prefix, "/") && RootPath {
+				newbody = regexc.ReplaceAll(body, []byte(prefix[:len(prefix)-1]+replaceElement+suffix))
+			} else if strings.HasSuffix(prefix, "/") && !RootPath {
+				newbody = regexc.ReplaceAll(body, []byte(prefix+replaceElement+suffix))
+			} else if !strings.HasSuffix(prefix, "/") && RootPath {
+				newbody = regexc.ReplaceAll(body, []byte(prefix+replaceElement+suffix))
+			} else {
+				newbody = regexc.ReplaceAll(body, []byte(prefix+"/"+replaceElement+suffix))
+			}
+			//	w.Header().Set("Content-Length", strconv.Itoa(len(newbody)))
+			w.Write(newbody)
+		},
 	}
 }
 
@@ -110,22 +116,20 @@ func getRealUrl(url string, referer string) string {
 	return utils.MatchOneOf(string(body), `var vid="([^"]+)`)[1]
 }
 
-
-
 //https://www.jiujiukanpian.com/play/
 type MovieStation struct {
-	Name  string
-	Prefix string
-	Referer string
+	Name         string
+	Prefix       string
+	Referer      string
 	DirectReturn bool
-	HostUrl   string
-	RootPath  bool
-	ContentType string
+	HostUrl      string
+	RootPath     bool
+	ContentType  string
 	ReRegxp      *regexp.Regexp
-	Jump    bool
+	Jump         bool
 	UrlBuildFunc func(requestUrl string, stationInfo MovieStation) string
-	BeforeFunc func(stationInfo MovieStation, url string, header http.Header)
-	AfterFunc  func(stationInfo MovieStation, url string, resp *http.Response, w http.ResponseWriter, r *http.Request)
+	BeforeFunc   func(stationInfo MovieStation, url string, header http.Header)
+	AfterFunc    func(stationInfo MovieStation, url string, resp *http.Response, w http.ResponseWriter, r *http.Request)
 }
 
 var MoiveStationMap = make(map[string]*MovieStation, 0)
@@ -203,26 +207,25 @@ func MovieHandler(w http.ResponseWriter, r *http.Request) {
 			var newbody []byte
 			regexc := stationInfo.ReRegxp
 			if strings.HasSuffix(prefix, "/") && stationInfo.RootPath {
-				newbody = regexc.ReplaceAll(body, []byte(prefix[:len(prefix) - 1]+"$0"))
+				newbody = regexc.ReplaceAll(body, []byte(prefix[:len(prefix)-1]+"$0"))
 			} else if strings.HasSuffix(prefix, "/") && !stationInfo.RootPath {
 				newbody = regexc.ReplaceAll(body, []byte(prefix+"$0"))
-			} else if !strings.HasSuffix(prefix, "/")  && stationInfo.RootPath {
+			} else if !strings.HasSuffix(prefix, "/") && stationInfo.RootPath {
 				newbody = regexc.ReplaceAll(body, []byte(prefix+"$0"))
 			} else {
 				newbody = regexc.ReplaceAll(body, []byte(prefix+"/$0"))
 			}
-		//	w.Header().Set("Content-Length", strconv.Itoa(len(newbody)))
+			//	w.Header().Set("Content-Length", strconv.Itoa(len(newbody)))
 			w.Write(newbody)
 		} else {
-		//	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+			//	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
 			w.Write(body)
 		}
 	} else {
 		stationInfo.AfterFunc(*stationInfo, url, resp, w, r)
 	}
 }
-	func getHostPrefix(url string) string {
-		t := strings.Split(url, `//`)
-		return t[0] + `//` + strings.Split(t[1], `/`)[0]
-	}
-
+func getHostPrefix(url string) string {
+	t := strings.Split(url, `//`)
+	return t[0] + `//` + strings.Split(t[1], `/`)[0]
+}

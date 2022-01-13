@@ -197,7 +197,7 @@ func RefererHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if referinfo.DirectReturn {
-		w.Header().Set("Content-Type", "audio/x-mpegurl")
+		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl;charset=UTF-8")
 		http.RedirectHandler(urlstr, 302).ServeHTTP(w, r)
 	}
 
@@ -225,13 +225,13 @@ func RefererHandler(w http.ResponseWriter, r *http.Request) {
 
 	if resp.StatusCode == 302 {
 		location, _ := resp.Location()
-		
+
 		values := url.Values{}
 		values.Set("url", location.String())
-		values.Set("prefix", location.String()[0:strings.LastIndex(location.String(),"/")])
+		values.Set("prefix", location.String()[0:strings.LastIndex(location.String(), "/")])
 
 		urlstring := fmt.Sprintf("http://%s:8880/transfer?%s", utils.GetIP(), values.Encode())
-		w.Header().Set("Content-Type", "audio/x-mpegurl")
+		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl;charset=UTF-8")
 		http.RedirectHandler(urlstring, 302).ServeHTTP(w, r)
 	}
 
@@ -250,7 +250,7 @@ func RefererHandler(w http.ResponseWriter, r *http.Request) {
 				prefix = fmt.Sprintf(prefix, referinfo.Id)
 			}
 
-			w.Header().Set("Content-Type", "audio/x-mpegurl")
+			w.Header().Set("Content-Type", "application/vnd.apple.mpegurl;charset=UTF-8")
 			var newbody []byte
 			regexc := referinfo.ReRegxp
 			if regexc == nil {
@@ -264,7 +264,7 @@ func RefererHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Write(newbody)
 		} else {
-			w.Header().Set("Content-Type", "audio/x-mpegurl")
+			w.Header().Set("Content-Type", "application/vnd.apple.mpegurl;charset=UTF-8")
 			w.Write(body)
 		}
 	} else {

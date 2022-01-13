@@ -13,27 +13,28 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
 	"wmenjoy.com/iptv/handlers"
 )
 
-func init()  {
-	addGdtv("GDWS", "广东卫视","43")
-	addGdtv("GDZJ", "广东珠江","44")
-	addGdtv("GDXW", "广东新闻","45")
-	addGdtv("GDTY", "广东体育","47")
-	addGdtv("NFWS", "广东南方卫视","51")
-	addGdtv("GDJJKJ", "广东经济科教","49")
-	addGdtv("GDYS", "广东影视","53")
-	addGdtv("GDZY", "广东综艺","16")
-	addGdtv("GDGJ", "广东珠江","46")
-	addGdtv("GDSE", "广东少儿","54")
-	addGdtv("GDJJKT", "广东嘉佳卡通","66")
-	addGdtv("GDNFGW", "广东珠江","42")
-	addGdtv("GDLNXQ", "广东岭南戏曲","15")
-	addGdtv("GDFC", "广东房产","67")
-	addGdtv("GDXDJY", "广东现代教育","13")
-	addGdtv("GDYD", "广东移动","74")
-	addGdtv("GRTNWHPD","广东GRTN文化频道", "75")
+func init() {
+	addGdtv("GDWS", "广东卫视", "43")
+	addGdtv("GDZJ", "广东珠江", "44")
+	addGdtv("GDXW", "广东新闻", "45")
+	addGdtv("GDTY", "广东体育", "47")
+	addGdtv("NFWS", "广东南方卫视", "51")
+	addGdtv("GDJJKJ", "广东经济科教", "49")
+	addGdtv("GDYS", "广东影视", "53")
+	addGdtv("GDZY", "广东综艺", "16")
+	addGdtv("GDGJ", "广东珠江", "46")
+	addGdtv("GDSE", "广东少儿", "54")
+	addGdtv("GDJJKT", "广东嘉佳卡通", "66")
+	addGdtv("GDNFGW", "广东珠江", "42")
+	addGdtv("GDLNXQ", "广东岭南戏曲", "15")
+	addGdtv("GDFC", "广东房产", "67")
+	addGdtv("GDXDJY", "广东现代教育", "13")
+	addGdtv("GDYD", "广东移动", "74")
+	addGdtv("GRTNWHPD", "广东GRTN文化频道", "75")
 }
 
 type nodeParamResult struct {
@@ -102,7 +103,7 @@ func optionForGetParam(url string) {
 func addGdtv(key string, name string, id string) {
 	handlers.RefererInfos[key] = &handlers.RerferInfo{
 		Id:      id,
-		Name: name,
+		Name:    name,
 		Referer: "http://app.cetv.cn",
 		UrlFmt:  "https://gdtv-api.gdtv.cn/api/tv/v2/tvChannel/%s?tvChannelPk=%s&node=%s",
 		Prefix:  "http://txycsbl.centv.cn/zb/",
@@ -200,7 +201,7 @@ func addGdtv(key string, name string, id string) {
 			values.Set("referer", "https://www.gdtv.cn/")
 
 			urlstr := fmt.Sprintf("http://%s:8880/transfer?%s", host, values.Encode())
-			w.Header().Set("Content-Type", "audio/x-mpegurl")
+			w.Header().Set("Content-Type", "application/vnd.apple.mpegurl;charset=UTF-8")
 			http.RedirectHandler(urlstr, 302).ServeHTTP(w, r)
 		},
 	}

@@ -6,10 +6,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+
 	"wmenjoy.com/iptv/handlers"
 )
+
 //含山新闻综合 http://223.241.197.199:1935/live/xinwen/playlist.m3u8
-func init()  {
+func init() {
 	addAhtv("AHWS", "安徽卫视 HD", "47")
 	addAhtv("AHJJSH", "安徽经济生活 HD", "71")
 	addAhtv("AHZYTY", "安徽综艺体育 HD", "73")
@@ -103,7 +105,7 @@ func addAhtv(key string, name string, id string) {
 			id, _ := strconv.Atoi(refererInfo.Id)
 			for _, value := range result {
 				if value.Id == id {
-					w.Header().Set("Content-Type", "audio/x-mpegurl")
+					w.Header().Set("Content-Type", "application/vnd.apple.mpegurl;charset=UTF-8")
 					http.RedirectHandler(string(value.M3U8), 302).ServeHTTP(w, r)
 					return
 				}

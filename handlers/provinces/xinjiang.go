@@ -12,36 +12,38 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
 	"wmenjoy.com/iptv/handlers"
 )
+
 //玛纳斯综合频道 http://218.84.127.245:1026/hls/main1/playlist.m3u8
-func init()  {
+func init() {
 
-	addTvInfo("XJSE", 51012,"新疆少儿", "新疆","新疆","少儿","少儿",
+	addTvInfo("XJSE", 51012, "新疆少儿", "新疆", "新疆", "少儿", "少儿",
 		"")
-	addTvInfo("XJWS", 51, "新疆卫视", "卫视","新疆","综合","综合",
+	addTvInfo("XJWS", 51, "新疆卫视", "卫视", "新疆", "综合", "综合",
 		"http://epg.51zmt.top:8000/tb1/ws/xinjiang.png")
-	addTvInfo("XJWWE", 51002,"新疆维吾尔语综合", "新疆","新疆","综合","综合","")
-	addTvInfo("XJHSK", 51003,"新疆哈萨克语综合", "新疆","新疆","综合","综合", "")
-	addTvInfo("XJHYZY", 51004,"新疆汉语综艺", "新疆","新疆","综艺","综艺", "")
-	addTvInfo("XJWWEYS", 51005,"新疆维吾尔影视", "新疆","新疆","影视","影视", "")
-	addTvInfo("XJHYJJSH", 51007,"新疆汉语经济生活", "新疆","新疆","财经","财经", "")
-	addTvInfo("XJHSKZY", 51008,"新疆哈萨克语综艺", "新疆","新疆","综艺","综艺", "")
-	addTvInfo("XJWWEJJSH", 51009,"新疆维吾尔经济生活", "新疆","新疆","财经","财经", "")
-	addTvInfo("XJHYTYJK", 51010,"新疆汉语体育健康", "新疆","新疆","综艺","综艺","")
-	addTvInfo("XJHYXXFW", 51011,"新疆汉语信息服务", "新疆","新疆","综艺","综艺","")
+	addTvInfo("XJWWE", 51002, "新疆维吾尔语综合", "新疆", "新疆", "综合", "综合", "")
+	addTvInfo("XJHSK", 51003, "新疆哈萨克语综合", "新疆", "新疆", "综合", "综合", "")
+	addTvInfo("XJHYZY", 51004, "新疆汉语综艺", "新疆", "新疆", "综艺", "综艺", "")
+	addTvInfo("XJWWEYS", 51005, "新疆维吾尔影视", "新疆", "新疆", "影视", "影视", "")
+	addTvInfo("XJHYJJSH", 51007, "新疆汉语经济生活", "新疆", "新疆", "财经", "财经", "")
+	addTvInfo("XJHSKZY", 51008, "新疆哈萨克语综艺", "新疆", "新疆", "综艺", "综艺", "")
+	addTvInfo("XJWWEJJSH", 51009, "新疆维吾尔经济生活", "新疆", "新疆", "财经", "财经", "")
+	addTvInfo("XJHYTYJK", 51010, "新疆汉语体育健康", "新疆", "新疆", "综艺", "综艺", "")
+	addTvInfo("XJHYXXFW", 51011, "新疆汉语信息服务", "新疆", "新疆", "综艺", "综艺", "")
 
-	addXjtvChannel("XJSE", "zb12", 1,"高清")
+	addXjtvChannel("XJSE", "zb12", 1, "高清")
 	addXjtvChannel("XJWS", "zb01", 1, "高清")
-	addXjtvChannel("XJWWE",  "zb02", 1, "高清")
-	addXjtvChannel("XJHSK",  "zb03", 1, "高清")
-	addXjtvChannel("XJHYZY","zb04", 1, "高清")
-	addXjtvChannel("XJWWEYS",  "zb05", 1, "高清")
-	addXjtvChannel("XJHYJJSH",  "zb07", 1, "高清")
+	addXjtvChannel("XJWWE", "zb02", 1, "高清")
+	addXjtvChannel("XJHSK", "zb03", 1, "高清")
+	addXjtvChannel("XJHYZY", "zb04", 1, "高清")
+	addXjtvChannel("XJWWEYS", "zb05", 1, "高清")
+	addXjtvChannel("XJHYJJSH", "zb07", 1, "高清")
 	addXjtvChannel("XJHSKZY", "zb08", 1, "高清")
 	addXjtvChannel("XJWWEJJSH", "zb09", 1, "高清")
 	addXjtvChannel("XJHYTYJK", "zb10", 1, "高清")
-	addXjtvChannel("XJHYXXFW",  "zb11", 1, "高清")
+	addXjtvChannel("XJHYXXFW", "zb11", 1, "高清")
 
 	addXjtv("XJSE", "新疆少儿", "zb12", "少儿", "高清")
 	addXjtv("XJWS", "新疆卫视", "zb01", "卫视", "高清")
@@ -56,21 +58,21 @@ func init()  {
 	addXjtv("XJHYXXFW", "新疆汉语信息服务 HD", "zb11", "科教", "高清")
 }
 
-func addTvInfo(key string, tvTagId int, name string, group string, subGroup string, category string, subCategory string, image string){
+func addTvInfo(key string, tvTagId int, name string, group string, subGroup string, category string, subCategory string, image string) {
 	handlers.TvInfoMap[key] = &handlers.IpTvInfo{
-		Key: key,
-		Name: name,
-		TvTagId: tvTagId,
-		Group: group,
-		SubGroup: subGroup,
-		Category: category,
+		Key:         key,
+		Name:        name,
+		TvTagId:     tvTagId,
+		Group:       group,
+		SubGroup:    subGroup,
+		Category:    category,
 		SubCategory: subCategory,
-		Image: image,
-		Channels: make(handlers.IpTVChannelList, 0),
+		Image:       image,
+		Channels:    make(handlers.IpTVChannelList, 0),
 	}
 }
 
-func addXjtvChannel(key string, id string, score int,  quality string) {
+func addXjtvChannel(key string, id string, score int, quality string) {
 	PKCS7UnPadding := func(origData []byte) []byte {
 		length := len(origData)
 		unpadding := int(origData[length-1])
@@ -78,14 +80,14 @@ func addXjtvChannel(key string, id string, score int,  quality string) {
 	}
 
 	_ = handlers.AddChannel(key, &handlers.IpTVChannel{
-		Id:     id,
-		Key:    key,
-		Src: handlers.ChannelSrcMap[handlers.GUANFANG_SRC],
-		Redirect:   true,
-		Quality: quality,
-		Score: score,
-		Prefix: "http://livehyw5.chinamcache.com/hyw/",
-		UrlFmt: "http://livehyw5.chinamcache.com/hyw/%s.m3u8?txSecret=%s&txTime=%s",
+		Id:       id,
+		Key:      key,
+		Src:      handlers.ChannelSrcMap[handlers.GUANFANG_SRC],
+		Redirect: true,
+		Quality:  quality,
+		Score:    score,
+		Prefix:   "http://livehyw5.chinamcache.com/hyw/",
+		UrlFmt:   "http://livehyw5.chinamcache.com/hyw/%s.m3u8?txSecret=%s&txTime=%s",
 		UrlBuildFunc: func(channelInfo handlers.IpTVChannel) string {
 			return "http://mediaxjtvs.chinamcache.com/hyw/media/playerJson/liveChannel/7d40edeb62fe4f8a9d9a08bc653dcab6_PlayerParamProfile.json"
 		},
@@ -123,8 +125,6 @@ func addXjtvChannel(key string, id string, score int,  quality string) {
 	})
 
 }
-
-
 
 type xjParamInfo struct {
 	Paramslist struct {
@@ -205,15 +205,15 @@ func addXjtv(key string, name string, id string, category string, quality string
 		return origData[:(length - unpadding)]
 	}
 	handlers.RefererInfos[key] = &handlers.RerferInfo{
-		Id:     id,
-		Key:    key,
-		Jump:   true,
-		Group: "新疆",
+		Id:       id,
+		Key:      key,
+		Jump:     true,
+		Group:    "新疆",
 		Category: category,
-		Name:  name,
-		Quality: quality,
-		Prefix: "http://livehyw5.chinamcache.com/hyw/",
-		UrlFmt: "http://livehyw5.chinamcache.com/hyw/%s.m3u8?txSecret=%s&txTime=%s",
+		Name:     name,
+		Quality:  quality,
+		Prefix:   "http://livehyw5.chinamcache.com/hyw/",
+		UrlFmt:   "http://livehyw5.chinamcache.com/hyw/%s.m3u8?txSecret=%s&txTime=%s",
 		UrlBuildFunc: func(refererInfo handlers.RerferInfo) string {
 			return "http://mediaxjtvs.chinamcache.com/hyw/media/playerJson/liveChannel/7d40edeb62fe4f8a9d9a08bc653dcab6_PlayerParamProfile.json"
 		},
@@ -227,7 +227,7 @@ func addXjtv(key string, name string, id string, category string, quality string
 			}
 
 			paramInfo := xjParamInfo{}
-			_ =  json.Unmarshal(body, &paramInfo)
+			_ = json.Unmarshal(body, &paramInfo)
 			block, err := aes.NewCipher([]byte("roZ68Okc5MUTMraM"))
 			result, _ := hex.DecodeString(paramInfo.ParamsConfig.CdnConfigEncrypt)
 			//blockSize := block.BlockSize()
@@ -245,9 +245,8 @@ func addXjtv(key string, name string, id string, category string, quality string
 			h.Write([]byte(encInfoList[0].EncryptKey + refererInfo.Id + timestamp))
 			a := h.Sum(nil)
 			realUrl := fmt.Sprintf(refererInfo.UrlFmt, refererInfo.Id, hex.EncodeToString(a), timestamp)
-			w.Header().Set("Content-Type", "audio/x-mpegurl")
+			w.Header().Set("Content-Type", "application/vnd.apple.mpegurl;charset=UTF-8")
 			http.RedirectHandler(realUrl, 302).ServeHTTP(w, r)
 		},
 	}
 }
-
