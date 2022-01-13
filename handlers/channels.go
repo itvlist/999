@@ -12,7 +12,31 @@ import (
 )
 
 var TvInfoMap = make(map[string]*IpTvInfo, 0)
-var ChannelMap = make(map[string]IpTVChannelList, 0)
+var ChannelSrcMap = make(map[string]*ChannelSource, 0)
+
+type ChannelSource struct {
+	Name string
+	IpList []string
+	Active bool
+}
+
+func init()  {
+	ChannelSrcMap[LANZHOU_MOBILE_SRC] = &ChannelSource{
+		Name: "兰州移动",
+		IpList: []string{"39.134.39.39"},
+		Active: true,
+	}
+	ChannelSrcMap[NANJING_MOBILE_SRC] = &ChannelSource{
+		Name: "南京移动",
+		IpList: []string{"39.134.39.39"},
+		Active: true,
+	}
+	ChannelSrcMap[GUANFANG_SRC] = &ChannelSource{
+		Name: "官方网站",
+		Active: true,
+	}
+}
+
 
 func AddChannel(key string, newChannel *IpTVChannel) error{
 	tvInfo := TvInfoMap[key]
@@ -36,7 +60,7 @@ func AddChannel(key string, newChannel *IpTVChannel) error{
 type IpTVChannelList []*IpTVChannel
 type IpTVChannel struct {
 	Key string
-	Src string
+	Src *ChannelSource
 	Id  string
 	Redirect bool
 	Alive    bool

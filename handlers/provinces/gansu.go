@@ -15,7 +15,7 @@ func AddNanjingMobileTvChannel(key string, id string, score int,  quality string
 		Id:       id,
 		Key:      key,
 		Alive:	  true,
-		Src:      "NanJingMobile",
+		Src:     handlers.ChannelSrcMap[handlers.NANJING_MOBILE_SRC],
 		DirectReturn: true,
 		Quality:  quality,
 		Score:    score,
@@ -27,7 +27,7 @@ func AddLanzhouMobileTvChannel(key string, id string, score int,  quality string
 	_ = handlers.AddChannel(key, &handlers.IpTVChannel{
 		Id:       id,
 		Key:      key,
-		Src:      "LanZhouMobile",
+		Src:     handlers.ChannelSrcMap[handlers.LANZHOU_MOBILE_SRC],
 		DirectReturn: true,
 		Alive:	  true,
 		Quality:  quality,

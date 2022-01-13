@@ -76,7 +76,7 @@ func addXjtvChannel(key string, id string, score int,  quality string) {
 	_ = handlers.AddChannel(key, &handlers.IpTVChannel{
 		Id:     id,
 		Key:    key,
-		Src: "guanfang",
+		Src: handlers.ChannelSrcMap[handlers.GUANFANG_SRC],
 		Redirect:   true,
 		Quality: quality,
 		Score: score,
