@@ -1,13 +1,7 @@
 # youtube_iptv
 Transfer youtube live streaming to http live stream for IPTV
 
-# 【晴园】
 
-Evade internet censorship!
-
-
-
-[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/itvlist/999)
 
 # Usage:
 
